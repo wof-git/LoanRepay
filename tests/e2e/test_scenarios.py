@@ -20,9 +20,9 @@ def _create_loan_with_scenarios(page):
     # Save base scenario
     page.click("button:has-text('Schedule')")
     page.wait_for_timeout(500)
-    page.click("text=What If Panel")
+    page.click("text=What-If Explorer")
     page.wait_for_timeout(300)
-    page.click("text=Save Scenario")
+    page.click("text=Save as Scenario")
     page.fill("input[name=scenario_name]", "Base")
     page.click("#modal-content button:has-text('Save')")
     page.wait_for_timeout(500)
@@ -30,7 +30,7 @@ def _create_loan_with_scenarios(page):
     # Save higher repayment scenario
     page.fill("input#whatif-repayment", "700")
     page.wait_for_timeout(500)
-    page.click("text=Save Scenario")
+    page.click("text=Save as Scenario")
     page.fill("input[name=scenario_name]", "Pay $700")
     page.click("#modal-content button:has-text('Save')")
     page.wait_for_timeout(500)

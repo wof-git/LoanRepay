@@ -113,8 +113,10 @@ class RepaymentChangeResponse(BaseModel):
 
 class WhatIfRequest(BaseModel):
     fixed_repayment: Optional[float] = None
-    rate_changes: Optional[list[RateChangeCreate]] = None
-    extra_repayments: Optional[list[ExtraRepaymentCreate]] = None
+    rate_changes: Optional[list[RateChangeCreate]] = None        # replaces DB (existing)
+    extra_repayments: Optional[list[ExtraRepaymentCreate]] = None # replaces DB (existing)
+    additional_rate_changes: Optional[list[RateChangeCreate]] = None        # merges with DB
+    additional_extra_repayments: Optional[list[ExtraRepaymentCreate]] = None # merges with DB
 
 
 class ScheduleRow(BaseModel):
@@ -151,6 +153,9 @@ class ScheduleResponse(BaseModel):
 class ScenarioCreate(BaseModel):
     name: str
     description: Optional[str] = None
+    whatif_fixed_repayment: Optional[float] = None
+    whatif_additional_rate_changes: Optional[list[RateChangeCreate]] = None
+    whatif_additional_extra_repayments: Optional[list[ExtraRepaymentCreate]] = None
 
 
 class ScenarioResponse(BaseModel):

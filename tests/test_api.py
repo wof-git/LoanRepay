@@ -495,6 +495,84 @@ def test_repayment_change_preview(client, created_loan):
     assert data["repayment_delta"] < 0
 
 
+# --- What-If Scenario Save ---
+
+def test_save_scenario_with_whatif_repayment(client, created_loan):
+    """Higher repayment via what-if -> less interest in saved scenario."""
+    lid = created_loan["id"]
+    base = client.get(f"/api/loans/{lid}/schedule").json()
+    res = client.post(f"/api/loans/{lid}/scenarios", json={
+        "name": "Pay $800",
+        "whatif_fixed_repayment": 800.0,
+    })
+    assert res.status_code == 201
+    data = res.json()
+    assert data["total_interest"] < base["summary"]["total_interest"]
+    assert data["actual_num_repayments"] < base["summary"]["total_repayments"]
+
+
+def test_save_scenario_with_whatif_rate_change(client, created_loan):
+    """Rate hike via what-if additional_rate_changes -> more interest."""
+    lid = created_loan["id"]
+    base = client.get(f"/api/loans/{lid}/schedule").json()
+    res = client.post(f"/api/loans/{lid}/scenarios", json={
+        "name": "Rate Hike",
+        "whatif_additional_rate_changes": [
+            {"effective_date": "2026-09-01", "annual_rate": 0.08},
+        ],
+    })
+    assert res.status_code == 201
+    data = res.json()
+    assert data["total_interest"] > base["summary"]["total_interest"]
+
+
+def test_save_scenario_with_whatif_extra(client, created_loan):
+    """Lump sum via what-if additional_extra_repayments -> less interest."""
+    lid = created_loan["id"]
+    base = client.get(f"/api/loans/{lid}/schedule").json()
+    res = client.post(f"/api/loans/{lid}/scenarios", json={
+        "name": "Lump Sum",
+        "whatif_additional_extra_repayments": [
+            {"payment_date": "2026-06-01", "amount": 5000.0},
+        ],
+    })
+    assert res.status_code == 201
+    data = res.json()
+    assert data["total_interest"] < base["summary"]["total_interest"]
+
+
+def test_save_scenario_without_whatif_still_works(client, created_loan):
+    """Backward compat: no what-if fields -> matches base schedule."""
+    lid = created_loan["id"]
+    base = client.get(f"/api/loans/{lid}/schedule").json()
+    res = client.post(f"/api/loans/{lid}/scenarios", json={
+        "name": "Base",
+    })
+    assert res.status_code == 201
+    data = res.json()
+    assert data["total_interest"] == base["summary"]["total_interest"]
+    assert data["actual_num_repayments"] == base["summary"]["total_repayments"]
+
+
+def test_whatif_additive_rate_change(client, created_loan):
+    """DB rate change + what-if additional rate change both present."""
+    lid = created_loan["id"]
+    # Add a DB rate change
+    client.post(f"/api/loans/{lid}/rates", json={
+        "effective_date": "2026-06-01",
+        "annual_rate": 0.06,
+    })
+    base = client.get(f"/api/loans/{lid}/schedule").json()
+    # What-if with additional rate change on a later date
+    whatif = client.post(f"/api/loans/{lid}/schedule/whatif", json={
+        "additional_rate_changes": [
+            {"effective_date": "2026-09-01", "annual_rate": 0.07},
+        ],
+    }).json()
+    # Both rate changes should be reflected — more interest than just the DB one
+    assert whatif["summary"]["total_interest"] > base["summary"]["total_interest"]
+
+
 # --- Health ---
 
 def test_health(client):

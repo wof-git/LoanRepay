@@ -24,7 +24,7 @@ def test_whatif_repayment_change(page):
     page.wait_for_timeout(500)
 
     # Open what-if panel
-    page.click("text=What If Panel")
+    page.click("text=What-If Explorer")
     page.wait_for_timeout(300)
 
     # Change repayment amount
@@ -42,7 +42,7 @@ def test_early_payoff_target(page):
     page.click("button:has-text('Schedule')")
     page.wait_for_timeout(500)
 
-    page.click("text=What If Panel")
+    page.click("text=What-If Explorer")
     page.wait_for_timeout(300)
 
     page.fill("input#whatif-target-date", "2027-06-01")
@@ -58,13 +58,13 @@ def test_whatif_save_as_scenario(page):
     page.click("button:has-text('Schedule')")
     page.wait_for_timeout(500)
 
-    page.click("text=What If Panel")
+    page.click("text=What-If Explorer")
     page.wait_for_timeout(300)
 
     page.fill("input#whatif-repayment", "700")
     page.wait_for_timeout(500)
 
-    page.click("text=Save Scenario")
+    page.click("text=Save as Scenario")
     page.fill("input[name=scenario_name]", "Pay $700")
     page.click("#modal-content button:has-text('Save')")
     page.wait_for_timeout(500)

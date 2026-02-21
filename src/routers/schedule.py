@@ -24,12 +24,22 @@ def _build_schedule(loan: Loan, db: Session, whatif: WhatIfRequest | None = None
         db_rates = db.query(RateChange).filter(RateChange.loan_id == loan.id).all()
         rate_changes = [{"effective_date": rc.effective_date, "annual_rate": rc.annual_rate, "adjusted_repayment": rc.adjusted_repayment} for rc in db_rates]
 
+    # Merge additional what-if rate changes (additive, not replacing)
+    if whatif and whatif.additional_rate_changes:
+        for rc in whatif.additional_rate_changes:
+            rate_changes.append({"effective_date": rc.effective_date, "annual_rate": rc.annual_rate})
+
     # Get extra repayments
     if whatif and whatif.extra_repayments is not None:
         extras = [{"payment_date": er.payment_date, "amount": er.amount} for er in whatif.extra_repayments]
     else:
         db_extras = db.query(ExtraRepayment).filter(ExtraRepayment.loan_id == loan.id).all()
         extras = [{"payment_date": er.payment_date, "amount": er.amount} for er in db_extras]
+
+    # Merge additional what-if extra repayments (additive, not replacing)
+    if whatif and whatif.additional_extra_repayments:
+        for er in whatif.additional_extra_repayments:
+            extras.append({"payment_date": er.payment_date, "amount": er.amount})
 
     # Get repayment changes
     db_repayment_changes = db.query(RepaymentChange).filter(RepaymentChange.loan_id == loan.id).all()

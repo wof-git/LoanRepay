@@ -136,33 +136,38 @@
                 </div>
             </div>
 
-            <!-- What-If Panel -->
+            <!-- What-If Explorer -->
             <div class="bg-indigo-50 rounded-xl shadow p-4 mb-4">
                 <div class="flex justify-between items-center cursor-pointer" onclick="app.toggleWhatIf()">
-                    <h3 class="text-sm font-medium text-indigo-700">What If Panel</h3>
+                    <h3 class="text-sm font-medium text-indigo-700">What-If Explorer</h3>
                     <span id="whatif-toggle" class="text-indigo-500 text-xs">&#9654; Expand</span>
                 </div>
                 <div id="whatif-panel" class="hidden mt-3 space-y-3">
+                    <p class="text-xs text-gray-500">Explore hypothetical changes. Adjustments update the schedule live. Save as a scenario to compare options.</p>
+                    <div class="flex flex-wrap gap-4 text-xs text-gray-600">
+                        <p id="whatif-current-repayment"></p>
+                        <p id="whatif-current-rate"></p>
+                    </div>
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <div>
                             <label class="block text-xs text-gray-600 mb-1">Repayment Amount</label>
                             <div class="flex items-center gap-2">
-                                <input type="range" id="whatif-slider" min="100" max="2000" step="10" class="flex-1" oninput="app.onWhatIfChange()">
+                                <input type="range" id="whatif-slider" min="100" max="2000" step="1" class="flex-1" oninput="app.onWhatIfChange()">
                                 <input type="number" id="whatif-repayment" name="whatif_repayment" class="w-24 border rounded px-2 py-1 text-sm" oninput="app.onWhatIfChange()">
                             </div>
                         </div>
                         <div>
                             <label class="block text-xs text-gray-600 mb-1">What-If Rate Change</label>
                             <div class="flex gap-1">
-                                <input type="date" id="whatif-rate-date" class="border rounded px-2 py-1 text-sm flex-1">
-                                <input type="number" id="whatif-rate-value" step="0.01" placeholder="%" class="w-20 border rounded px-2 py-1 text-sm">
+                                <input type="date" id="whatif-rate-date" class="border rounded px-2 py-1 text-sm flex-1" onchange="app.onWhatIfChange()">
+                                <input type="number" id="whatif-rate-value" step="0.01" placeholder="%" class="w-20 border rounded px-2 py-1 text-sm" oninput="app.onWhatIfChange()">
                             </div>
                         </div>
                         <div>
                             <label class="block text-xs text-gray-600 mb-1">What-If Lump Sum</label>
                             <div class="flex gap-1">
-                                <input type="date" id="whatif-extra-date" class="border rounded px-2 py-1 text-sm flex-1">
-                                <input type="number" id="whatif-extra-amount" step="100" placeholder="$" class="w-24 border rounded px-2 py-1 text-sm">
+                                <input type="date" id="whatif-extra-date" class="border rounded px-2 py-1 text-sm flex-1" onchange="app.onWhatIfChange()">
+                                <input type="number" id="whatif-extra-amount" step="100" placeholder="$" class="w-24 border rounded px-2 py-1 text-sm" oninput="app.onWhatIfChange()">
                             </div>
                         </div>
                     </div>
@@ -175,11 +180,30 @@
                         </div>
                     </div>
                     <div id="delta-banner" class="delta-banner hidden bg-green-100 text-green-800 rounded px-3 py-2 text-sm"></div>
-                    <div class="flex gap-2">
-                        <button onclick="app.applyWhatIf()" class="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded hover:bg-indigo-700">Apply Changes</button>
-                        <button onclick="app.saveWhatIfScenario()" class="text-xs bg-gray-600 text-white px-3 py-1.5 rounded hover:bg-gray-700">Save Scenario</button>
+                    <div id="whatif-impact" class="hidden">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <div class="bg-white border rounded-lg p-3">
+                                <h4 class="text-xs font-semibold text-gray-500 mb-2">Current Plan</h4>
+                                <p class="text-sm"><span class="text-gray-500">Interest:</span> <span id="impact-base-interest" class="font-medium">-</span></p>
+                                <p class="text-sm"><span class="text-gray-500">Payments:</span> <span id="impact-base-payments" class="font-medium">-</span></p>
+                                <p class="text-sm"><span class="text-gray-500">Payoff:</span> <span id="impact-base-payoff" class="font-medium">-</span></p>
+                                <p class="text-sm"><span class="text-gray-500">Total Paid:</span> <span id="impact-base-total" class="font-medium">-</span></p>
+                            </div>
+                            <div class="bg-white border rounded-lg p-3">
+                                <h4 class="text-xs font-semibold text-gray-500 mb-2">What-If Result</h4>
+                                <p class="text-sm"><span class="text-gray-500">Interest:</span> <span id="impact-wi-interest" class="font-medium">-</span></p>
+                                <p class="text-sm"><span class="text-gray-500">Payments:</span> <span id="impact-wi-payments" class="font-medium">-</span></p>
+                                <p class="text-sm"><span class="text-gray-500">Payoff:</span> <span id="impact-wi-payoff" class="font-medium">-</span></p>
+                                <p class="text-sm"><span class="text-gray-500">Total Paid:</span> <span id="impact-wi-total" class="font-medium">-</span></p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        <button onclick="app.saveWhatIfScenario()" class="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded hover:bg-indigo-700">Save as Scenario</button>
+                        <button onclick="app.applyWhatIf()" class="text-xs bg-amber-500 text-white px-3 py-1.5 rounded hover:bg-amber-600">Apply Repayment to Loan</button>
                         <button onclick="app.resetWhatIf()" class="text-xs text-gray-500 hover:text-gray-700">Reset</button>
                     </div>
+                    <p class="text-xs text-gray-400">Saved scenarios can be compared in the Scenarios tab.</p>
                 </div>
             </div>
 

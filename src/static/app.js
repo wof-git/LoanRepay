@@ -443,8 +443,22 @@ function toggleWhatIf() {
     if (state.whatIfActive && state.schedule) {
         const loan = state.loans.find(l => l.id === state.currentLoanId);
         const repayment = loan?.fixed_repayment || state.schedule.rows[0]?.calculated_pmt || 500;
-        document.getElementById('whatif-slider').value = repayment;
+
+        // Dynamic slider range
+        const slider = document.getElementById('whatif-slider');
+        slider.min = Math.max(Math.floor(repayment * 0.5 / 10) * 10, 50);
+        slider.max = Math.ceil(repayment * 2.5 / 10) * 10;
+        slider.step = 1;
+        slider.value = repayment;
         document.getElementById('whatif-repayment').value = repayment;
+
+        // Context labels
+        const freq = loan?.frequency || 'fortnightly';
+        document.getElementById('whatif-current-repayment').textContent = `Current: ${fmtMoney(repayment)}/${freq}`;
+        document.getElementById('whatif-current-rate').textContent = `Current rate: ${((loan?.annual_rate || 0) * 100).toFixed(2)}%`;
+
+        // Hide impact section on fresh open
+        document.getElementById('whatif-impact').classList.add('hidden');
     }
 }
 
@@ -471,13 +485,13 @@ async function runWhatIf() {
     const rateDate = document.getElementById('whatif-rate-date').value;
     const rateVal = parseFloat(document.getElementById('whatif-rate-value').value);
     if (rateDate && rateVal > 0) {
-        body.rate_changes = [{ effective_date: rateDate, annual_rate: rateVal / 100 }];
+        body.additional_rate_changes = [{ effective_date: rateDate, annual_rate: rateVal / 100 }];
     }
 
     const extraDate = document.getElementById('whatif-extra-date').value;
     const extraAmt = parseFloat(document.getElementById('whatif-extra-amount').value);
     if (extraDate && extraAmt > 0) {
-        body.extra_repayments = [{ payment_date: extraDate, amount: extraAmt }];
+        body.additional_extra_repayments = [{ payment_date: extraDate, amount: extraAmt }];
     }
 
     try {
@@ -511,9 +525,11 @@ function showWhatIfDelta(whatIfSchedule) {
 
     if (Math.abs(interestSaved) < 0.01 && repDiff === 0) {
         banner.classList.add('hidden');
+        document.getElementById('whatif-impact').classList.add('hidden');
         return;
     }
 
+    // Delta banner
     const parts = [];
     if (interestSaved > 0) parts.push(`Saves ${fmtMoney(interestSaved)} interest`);
     if (interestSaved < 0) parts.push(`Costs ${fmtMoney(Math.abs(interestSaved))} more interest`);
@@ -523,13 +539,53 @@ function showWhatIfDelta(whatIfSchedule) {
     banner.textContent = parts.join(' | ');
     banner.classList.remove('hidden');
     banner.className = `delta-banner rounded px-3 py-2 text-sm ${interestSaved >= 0 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`;
+
+    // Impact comparison cards
+    const impact = document.getElementById('whatif-impact');
+    impact.classList.remove('hidden');
+
+    document.getElementById('impact-base-interest').textContent = fmtMoney(base.total_interest);
+    document.getElementById('impact-base-payments').textContent = base.total_repayments;
+    document.getElementById('impact-base-payoff').textContent = fmtDate(base.payoff_date);
+    document.getElementById('impact-base-total').textContent = fmtMoney(base.total_paid);
+
+    const wiInterestEl = document.getElementById('impact-wi-interest');
+    const wiPaymentsEl = document.getElementById('impact-wi-payments');
+    const wiPayoffEl = document.getElementById('impact-wi-payoff');
+    const wiTotalEl = document.getElementById('impact-wi-total');
+
+    wiInterestEl.textContent = fmtMoney(wi.total_interest);
+    wiPaymentsEl.textContent = wi.total_repayments;
+    wiPayoffEl.textContent = fmtDate(wi.payoff_date);
+    wiTotalEl.textContent = fmtMoney(wi.total_paid);
+
+    // Color code improvements vs regressions
+    wiInterestEl.className = `font-medium ${interestSaved > 0 ? 'text-green-600' : interestSaved < 0 ? 'text-red-600' : ''}`;
+    wiPaymentsEl.className = `font-medium ${repDiff > 0 ? 'text-green-600' : repDiff < 0 ? 'text-red-600' : ''}`;
 }
 
-async function applyWhatIf() {
+function applyWhatIf() {
     const rep = parseFloat(document.getElementById('whatif-repayment').value);
     if (!rep || !state.currentLoanId) return;
+    const loan = state.loans.find(l => l.id === state.currentLoanId);
+    const currentRep = loan?.fixed_repayment || state.schedule?.rows[0]?.calculated_pmt || 0;
+    showModal(`
+        <h2 class="text-lg font-bold mb-4 text-amber-600">Apply Repayment to Loan</h2>
+        <p class="text-sm text-gray-600 mb-2">This will permanently change the loan's fixed repayment amount:</p>
+        <p class="text-sm mb-1"><span class="text-gray-500">Current:</span> <strong>${fmtMoney(currentRep)}</strong></p>
+        <p class="text-sm mb-3"><span class="text-gray-500">New:</span> <strong>${fmtMoney(rep)}</strong></p>
+        <p class="text-xs text-amber-600 mb-4">Only the repayment amount is applied. Rate changes and lump sums from the what-if panel are not saved to the loan.</p>
+        <div class="flex gap-2">
+            <button onclick="app._confirmApplyWhatIf(${rep})" class="bg-amber-500 text-white px-4 py-1.5 rounded text-sm hover:bg-amber-600">Confirm</button>
+            <button onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
+        </div>
+    `);
+}
+
+async function _confirmApplyWhatIf(rep) {
     try {
         await apiJson(`/loans/${state.currentLoanId}`, 'PUT', { fixed_repayment: rep });
+        closeModal();
         toast('Repayment amount updated!', 'success');
         await loadLoans();
         await loadSchedule();
@@ -540,15 +596,55 @@ async function applyWhatIf() {
 }
 
 async function saveWhatIfScenario() {
+    const loan = state.loans.find(l => l.id === state.currentLoanId);
+    const loanRepayment = loan?.fixed_repayment;
+    const calcPmt = state.schedule?.rows[0]?.calculated_pmt;
+    const currentRep = loanRepayment || calcPmt || 0;
+
+    // Gather what-if params
+    const whatIfParams = {};
+    const includes = [];
+
+    const sliderRep = parseFloat(document.getElementById('whatif-repayment').value);
+    if (sliderRep > 0 && Math.abs(sliderRep - currentRep) > 0.5) {
+        whatIfParams.whatif_fixed_repayment = sliderRep;
+        includes.push(`Repayment ${fmtMoney(sliderRep)}`);
+    } else if (sliderRep > 0 && loanRepayment === null) {
+        // No fixed repayment on loan — any slider value counts
+        whatIfParams.whatif_fixed_repayment = sliderRep;
+        includes.push(`Repayment ${fmtMoney(sliderRep)}`);
+    }
+
+    const rateDate = document.getElementById('whatif-rate-date').value;
+    const rateVal = parseFloat(document.getElementById('whatif-rate-value').value);
+    if (rateDate && rateVal > 0) {
+        whatIfParams.whatif_additional_rate_changes = [{ effective_date: rateDate, annual_rate: rateVal / 100 }];
+        includes.push(`Rate ${rateVal}% from ${fmtDate(rateDate)}`);
+    }
+
+    const extraDate = document.getElementById('whatif-extra-date').value;
+    const extraAmt = parseFloat(document.getElementById('whatif-extra-amount').value);
+    if (extraDate && extraAmt > 0) {
+        whatIfParams.whatif_additional_extra_repayments = [{ payment_date: extraDate, amount: extraAmt }];
+        includes.push(`Lump sum ${fmtMoney(extraAmt)} on ${fmtDate(extraDate)}`);
+    }
+
+    const includesHtml = includes.length > 0
+        ? `<div class="bg-indigo-50 border border-indigo-200 rounded p-2 mb-3"><p class="text-xs font-medium text-indigo-700 mb-1">Includes:</p><ul class="text-xs text-indigo-600 list-disc list-inside">${includes.map(i => `<li>${i}</li>`).join('')}</ul></div>`
+        : '<p class="text-xs text-gray-400 mb-3">No what-if adjustments — base state will be saved.</p>';
+
+    const autoDesc = includes.length > 0 ? includes.join('; ') : '';
+
     showModal(`
-        <h2 class="text-lg font-bold mb-4">Save Scenario</h2>
+        <h2 class="text-lg font-bold mb-4">Save as Scenario</h2>
+        ${includesHtml}
         <form id="save-scenario-form" class="space-y-3">
             <div><label class="block text-sm text-gray-600">Scenario Name</label>
                 <input name="scenario_name" required class="w-full border rounded px-3 py-1.5 text-sm" placeholder="Pay $700/fortnight"></div>
             <div><label class="block text-sm text-gray-600">Description (optional)</label>
-                <textarea name="description" class="w-full border rounded px-3 py-1.5 text-sm" rows="2"></textarea></div>
+                <textarea name="description" class="w-full border rounded px-3 py-1.5 text-sm" rows="2">${autoDesc}</textarea></div>
             <div class="flex gap-2 pt-2">
-                <button type="submit" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Save</button>
+                <button type="submit" class="bg-indigo-600 text-white px-4 py-1.5 rounded text-sm hover:bg-indigo-700">Save</button>
                 <button type="button" onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
             </div>
         </form>
@@ -560,6 +656,7 @@ async function saveWhatIfScenario() {
             await apiJson(`/loans/${state.currentLoanId}/scenarios`, 'POST', {
                 name: fd.get('scenario_name'),
                 description: fd.get('description') || null,
+                ...whatIfParams,
             });
             closeModal();
             toast('Scenario saved!', 'success');
@@ -570,8 +667,10 @@ async function saveWhatIfScenario() {
 }
 
 function resetWhatIf() {
-    document.getElementById('whatif-repayment').value = '';
-    document.getElementById('whatif-slider').value = 500;
+    const loan = state.loans.find(l => l.id === state.currentLoanId);
+    const repayment = loan?.fixed_repayment || state.schedule?.rows[0]?.calculated_pmt || 500;
+    document.getElementById('whatif-repayment').value = repayment;
+    document.getElementById('whatif-slider').value = repayment;
     document.getElementById('whatif-rate-date').value = '';
     document.getElementById('whatif-rate-value').value = '';
     document.getElementById('whatif-extra-date').value = '';
@@ -579,6 +678,7 @@ function resetWhatIf() {
     document.getElementById('whatif-target-date').value = '';
     document.getElementById('payoff-result').textContent = '';
     document.getElementById('delta-banner').classList.add('hidden');
+    document.getElementById('whatif-impact').classList.add('hidden');
     if (state.schedule) {
         renderSchedule(state, { fmtMoney, fmtDate, fmtPct, api, apiJson, toast, loadSchedule, showModal, closeModal });
     }
@@ -942,7 +1042,7 @@ function exportSchedule(format) {
 window.app = {
     switchTab, showCreateLoan, showEditLoan, confirmDeleteLoan, deleteLoan,
     showImport, closeModal, startRenameLoan, cancelRenameLoan,
-    toggleWhatIf, onWhatIfChange, applyWhatIf,
+    toggleWhatIf, onWhatIfChange, applyWhatIf, _confirmApplyWhatIf,
     saveWhatIfScenario, resetWhatIf, calcPayoffTarget,
     showAddRateChange, deleteRateChange,
     showAddRepaymentChange, deleteRepaymentChange,
