@@ -165,6 +165,10 @@ def calculate_schedule(
         if fixed_repayment is not None:
             actual_payment = fixed_repayment
             additional = round(actual_payment - calculated_payment, 2)
+            # Suppress tiny rounding artifacts (< 10c) from cumulative drift
+            if abs(additional) < 0.10:
+                additional = 0.0
+                calculated_payment = actual_payment
         else:
             actual_payment = calculated_payment
             additional = 0.0
