@@ -25,6 +25,9 @@ export function renderSchedule(state, helpers, isWhatIf = false) {
     const currentYear = new Date().getFullYear().toString();
     const container = document.getElementById('schedule-table');
 
+    // Only show Extra column when there are actual extra repayments
+    const hasExtras = s.rows.some(r => r.extra > 0);
+
     // Export buttons
     let html = `<div class="flex gap-2 mb-3 no-print">
         <button onclick="app.exportSchedule('csv')" class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200">Export CSV</button>
@@ -55,13 +58,10 @@ export function renderSchedule(state, helpers, isWhatIf = false) {
                                 <th class="px-3 py-1 w-8"></th>
                                 <th class="px-2 py-1">#</th>
                                 <th class="px-2 py-1">Date</th>
-                                <th class="px-2 py-1 text-right">Opening</th>
-                                <th class="px-2 py-1 text-right">Principal</th>
+                                <th class="px-2 py-1 text-right">Balance</th>
+                                <th class="px-2 py-1 text-right">Repayment</th>
                                 <th class="px-2 py-1 text-right">Interest</th>
-                                <th class="px-2 py-1 text-right">Rate</th>
-                                <th class="px-2 py-1 text-right">PMT</th>
-                                <th class="px-2 py-1 text-right">Additional</th>
-                                <th class="px-2 py-1 text-right">Extra</th>
+                                <th class="px-2 py-1 text-right">Principal</th>${hasExtras ? '<th class="px-2 py-1 text-right">Extra</th>' : ''}
                                 <th class="px-2 py-1 text-right">Closing</th>
                             </tr>
                         </thead>
@@ -85,12 +85,9 @@ export function renderSchedule(state, helpers, isWhatIf = false) {
                 <td class="px-2 py-1 text-gray-500">${row.number}</td>
                 <td class="px-2 py-1">${fmtDate(row.date)}</td>
                 <td class="px-2 py-1 text-right">${fmtMoney(row.opening_balance)}</td>
-                <td class="px-2 py-1 text-right">${fmtMoney(row.principal)}</td>
+                <td class="px-2 py-1 text-right font-medium">${fmtMoney(row.calculated_pmt)}</td>
                 <td class="px-2 py-1 text-right text-orange-600">${fmtMoney(row.interest)}</td>
-                <td class="px-2 py-1 text-right">${fmtPct(row.rate)}</td>
-                <td class="px-2 py-1 text-right">${fmtMoney(row.calculated_pmt)}</td>
-                <td class="px-2 py-1 text-right">${row.additional > 0 ? fmtMoney(row.additional) : '-'}</td>
-                <td class="px-2 py-1 text-right">${row.extra > 0 ? fmtMoney(row.extra) : '-'}</td>
+                <td class="px-2 py-1 text-right text-green-700">${fmtMoney(row.principal)}</td>${hasExtras ? `<td class="px-2 py-1 text-right text-blue-600">${row.extra > 0 ? fmtMoney(row.extra) : '-'}</td>` : ''}
                 <td class="px-2 py-1 text-right font-medium">${fmtMoney(row.closing_balance)}</td>
             </tr>`;
         });
