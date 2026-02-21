@@ -369,41 +369,6 @@ async function deleteLoan() {
 
 // --- Import ---
 
-function showImport() {
-    showModal(`
-        <h2 class="text-lg font-bold mb-4">Import from Spreadsheet</h2>
-        <form id="import-form" class="space-y-3">
-            <div>
-                <label class="block text-sm text-gray-600 mb-1">Select .xlsx file</label>
-                <input type="file" name="file" accept=".xlsx" required class="w-full text-sm">
-            </div>
-            <div class="flex gap-2 pt-2">
-                <button type="submit" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Import</button>
-                <button type="button" onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
-            </div>
-        </form>
-    `);
-    document.getElementById('import-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const fd = new FormData(e.target);
-        try {
-            const res = await fetch(`${API}/loans/import`, { method: 'POST', body: fd });
-            if (!res.ok) {
-                const err = await res.json().catch(() => ({}));
-                throw new Error(err.detail || 'Import failed');
-            }
-            const loan = await res.json();
-            closeModal();
-            toast('Spreadsheet imported!', 'success');
-            state.currentLoanId = loan.id;
-            await loadLoans();
-            await selectLoan(loan.id);
-        } catch (e) {
-            toast('Import failed: ' + e.message, 'error');
-        }
-    });
-}
-
 // --- Rename Loan ---
 
 function startRenameLoan() {
@@ -1070,7 +1035,7 @@ async function _deleteScenario(id) {
 
 window.app = {
     switchTab, showCreateLoan, showEditLoan, confirmDeleteLoan, deleteLoan,
-    showImport, closeModal, startRenameLoan, cancelRenameLoan,
+    closeModal, startRenameLoan, cancelRenameLoan,
     toggleWhatIf, applyWhatIf, _confirmApplyWhatIf,
     saveWhatIfScenario, resetWhatIf, calcPayoffTarget,
     showAddRateChange, deleteRateChange,
