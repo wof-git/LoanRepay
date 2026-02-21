@@ -34,6 +34,7 @@ class RateChange(Base):
     loan_id = Column(Integer, ForeignKey("loans.id", ondelete="CASCADE"), nullable=False)
     effective_date = Column(Text, nullable=False)
     annual_rate = Column(Float, nullable=False)
+    adjusted_repayment = Column(Float, nullable=True)
     note = Column(Text, nullable=True)
     created_at = Column(Text, server_default="(datetime('now'))")
 

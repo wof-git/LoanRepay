@@ -671,21 +671,22 @@ function _showRatePreviewStep(preview, rateDate, newRate, note) {
     document.getElementById('rate-confirm-btn').addEventListener('click', () => {
         const selected = parseInt(document.querySelector('input[name="rate_option"]:checked').value);
         const chosenOpt = preview.options[selected];
-        // If user chose option B (adjust repayment) and it differs from current
-        const adjustRepayment = (selected > 0 && chosenOpt.fixed_repayment !== preview.current_repayment)
+        // If user chose option B (adjust repayment), store it on the rate change
+        const adjustedRepayment = (selected > 0 && chosenOpt.fixed_repayment !== preview.current_repayment)
             ? chosenOpt.fixed_repayment : null;
-        _saveRateChange(rateDate, newRate, note, adjustRepayment);
+        _saveRateChange(rateDate, newRate, note, adjustedRepayment);
     });
 }
 
-async function _saveRateChange(rateDate, newRate, note, adjustRepayment) {
+async function _saveRateChange(rateDate, newRate, note, adjustedRepayment) {
     try {
-        const qs = adjustRepayment != null ? `?adjust_repayment=${adjustRepayment}` : '';
-        await apiJson(`/loans/${state.currentLoanId}/rates${qs}`, 'POST', {
+        const body = {
             effective_date: rateDate,
             annual_rate: newRate,
             note: note,
-        });
+        };
+        if (adjustedRepayment != null) body.adjusted_repayment = adjustedRepayment;
+        await apiJson(`/loans/${state.currentLoanId}/rates`, 'POST', body);
         closeModal();
         toast('Rate change added!', 'success');
         await loadLoans();

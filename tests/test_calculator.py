@@ -356,39 +356,76 @@ def test_prorate_schedule_differs_from_simple():
     assert sched_boundary.total_interest != sched_mid.total_interest
 
 
-def test_paid_fixed_repayment_locks_in_history():
-    """Paid periods should use paid_fixed_repayment, not the new fixed_repayment."""
-    paid_set = {1, 2, 3, 4, 5}
-
-    # Schedule where all periods use $612.39
-    sched_uniform = calculate_schedule(
+def test_adjusted_repayment_on_rate_change():
+    """Rate change with adjusted_repayment changes payment from that date forward."""
+    # Schedule with rate change but no adjusted_repayment
+    sched_no_adj = calculate_schedule(
         principal=30050.00,
         annual_rate=0.0575,
         frequency="fortnightly",
         start_date=date(2026, 2, 20),
         loan_term=52,
-        fixed_repayment=650.00,
+        fixed_repayment=612.39,
+        rate_changes=[{"effective_date": "2026-09-01", "annual_rate": 0.06}],
     )
 
-    # Schedule where paid periods use $612.39 but future periods use $650
-    sched_split = calculate_schedule(
+    # Schedule with rate change carrying adjusted_repayment
+    sched_adj = calculate_schedule(
         principal=30050.00,
         annual_rate=0.0575,
         frequency="fortnightly",
         start_date=date(2026, 2, 20),
         loan_term=52,
-        fixed_repayment=650.00,
-        paid_set=paid_set,
-        paid_fixed_repayment=612.39,
+        fixed_repayment=612.39,
+        rate_changes=[{"effective_date": "2026-09-01", "annual_rate": 0.06, "adjusted_repayment": 620.00}],
     )
 
-    # Paid periods should differ — paid rows used $612.39 in split version
-    # but $650 in the uniform version
-    for i in range(5):
-        row_uniform = sched_uniform.rows[i]
-        row_split = sched_split.rows[i]
-        assert row_uniform.closing_balance != row_split.closing_balance
+    # Early periods (before rate change) should be identical
+    assert sched_no_adj.rows[0].closing_balance == sched_adj.rows[0].closing_balance
 
-    # Both should still pay off
-    assert sched_uniform.rows[-1].closing_balance == 0.0
-    assert sched_split.rows[-1].closing_balance == 0.0
+    # Total interest should differ — higher repayment from rate change date
+    assert sched_adj.total_interest < sched_no_adj.total_interest
+    # Fewer total payments with higher repayment
+    assert sched_adj.total_repayments <= sched_no_adj.total_repayments
+
+    # Both should pay off
+    assert sched_no_adj.rows[-1].closing_balance == 0.0
+    assert sched_adj.rows[-1].closing_balance == 0.0
+
+
+def test_adjusted_repayment_reverts_on_removal():
+    """Removing a rate change with adjusted_repayment reverts to original schedule."""
+    base_sched = calculate_schedule(
+        principal=30050.00,
+        annual_rate=0.0575,
+        frequency="fortnightly",
+        start_date=date(2026, 2, 20),
+        loan_term=52,
+        fixed_repayment=612.39,
+    )
+
+    # Same params but with a rate change + adjusted_repayment
+    sched_with = calculate_schedule(
+        principal=30050.00,
+        annual_rate=0.0575,
+        frequency="fortnightly",
+        start_date=date(2026, 2, 20),
+        loan_term=52,
+        fixed_repayment=612.39,
+        rate_changes=[{"effective_date": "2026-09-01", "annual_rate": 0.06, "adjusted_repayment": 620.00}],
+    )
+
+    # They should differ
+    assert sched_with.total_interest != base_sched.total_interest
+
+    # "Remove" the rate change (pass no rate_changes) — should match base
+    sched_after_remove = calculate_schedule(
+        principal=30050.00,
+        annual_rate=0.0575,
+        frequency="fortnightly",
+        start_date=date(2026, 2, 20),
+        loan_term=52,
+        fixed_repayment=612.39,
+    )
+    assert sched_after_remove.total_interest == base_sched.total_interest
+    assert sched_after_remove.total_repayments == base_sched.total_repayments

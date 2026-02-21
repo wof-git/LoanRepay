@@ -11,10 +11,22 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
+def _run_migrations(eng):
+    """Add columns that don't exist yet (SQLite ALTER TABLE ADD COLUMN)."""
+    with eng.connect() as conn:
+        result = conn.exec_driver_sql("PRAGMA table_info(rate_changes)")
+        columns = {row[1] for row in result}
+        if "adjusted_repayment" not in columns:
+            conn.exec_driver_sql("ALTER TABLE rate_changes ADD COLUMN adjusted_repayment REAL")
+            conn.commit()
+            logger.info("Migration: added adjusted_repayment column to rate_changes")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     os.makedirs(DATA_DIR, exist_ok=True)
     Base.metadata.create_all(bind=engine)
+    _run_migrations(engine)
     logger.info(f"Database initialized at {DATA_DIR}")
     yield
 

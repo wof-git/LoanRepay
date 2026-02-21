@@ -47,12 +47,14 @@ class LoanDetailResponse(LoanResponse):
 class RateChangeCreate(BaseModel):
     effective_date: str
     annual_rate: float = Field(ge=0)
+    adjusted_repayment: Optional[float] = Field(default=None, gt=0)
     note: Optional[str] = None
 
 
 class RateChangeUpdate(BaseModel):
     effective_date: Optional[str] = None
     annual_rate: Optional[float] = Field(default=None, ge=0)
+    adjusted_repayment: Optional[float] = None
     note: Optional[str] = None
 
 
@@ -61,6 +63,7 @@ class RateChangeResponse(BaseModel):
     loan_id: int
     effective_date: str
     annual_rate: float
+    adjusted_repayment: Optional[float]
     note: Optional[str]
     created_at: Optional[str]
 

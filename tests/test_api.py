@@ -337,55 +337,54 @@ def test_rate_change_preview_without_fixed_repayment(client, sample_loan_data):
     assert len(data["options"]) == 1
 
 
-def test_rate_change_with_adjust_repayment(client, created_loan):
+def test_rate_change_with_adjusted_repayment(client, created_loan):
+    """Rate change with adjusted_repayment stored on the rate change record."""
     lid = created_loan["id"]
-    res = client.post(f"/api/loans/{lid}/rates?adjust_repayment=650.00", json={
+    res = client.post(f"/api/loans/{lid}/rates", json={
         "effective_date": "2026-09-01",
         "annual_rate": 0.06,
+        "adjusted_repayment": 620.00,
     })
     assert res.status_code == 201
-    # Verify the loan's fixed_repayment was updated
+    data = res.json()
+    assert data["adjusted_repayment"] == 620.00
+    # Loan's fixed_repayment should NOT change
     loan = client.get(f"/api/loans/{lid}").json()
-    assert loan["fixed_repayment"] == 650.00
+    assert loan["fixed_repayment"] == 612.39
 
 
-def test_rate_change_without_adjust_keeps_existing(client, created_loan):
+def test_rate_change_without_adjusted_repayment(client, created_loan):
     lid = created_loan["id"]
     res = client.post(f"/api/loans/{lid}/rates", json={
         "effective_date": "2026-09-01",
         "annual_rate": 0.06,
     })
     assert res.status_code == 201
-    # Verify the loan's fixed_repayment was NOT changed
+    assert res.json()["adjusted_repayment"] is None
     loan = client.get(f"/api/loans/{lid}").json()
     assert loan["fixed_repayment"] == 612.39
 
 
-def test_rate_change_preview_respects_paid_periods(client, created_loan):
-    """Option B (adjust repayment) should differ when payments are already made."""
+def test_delete_rate_change_reverts_schedule(client, created_loan):
+    """Deleting a rate change with adjusted_repayment reverts the schedule."""
     lid = created_loan["id"]
+    # Get base schedule
+    base = client.get(f"/api/loans/{lid}/schedule").json()
 
-    # Preview with no paid periods
-    preview_clean = client.post(f"/api/loans/{lid}/rates/preview", json={
+    # Add rate change with adjusted_repayment
+    rc = client.post(f"/api/loans/{lid}/rates", json={
         "effective_date": "2026-09-01",
         "annual_rate": 0.06,
+        "adjusted_repayment": 620.00,
     }).json()
+    changed = client.get(f"/api/loans/{lid}/schedule").json()
+    assert changed["summary"]["total_interest"] != base["summary"]["total_interest"]
 
-    # Mark first 5 payments as paid
-    for i in range(1, 6):
-        client.post(f"/api/loans/{lid}/paid/{i}")
-
-    # Preview with 5 paid periods — option B should differ because
-    # paid periods are locked at $612.39, only future ones adjust
-    preview_paid = client.post(f"/api/loans/{lid}/rates/preview", json={
-        "effective_date": "2026-09-01",
-        "annual_rate": 0.06,
-    }).json()
-
-    # Option A should be the same (repayment unchanged)
-    assert preview_clean["options"][0]["fixed_repayment"] == preview_paid["options"][0]["fixed_repayment"]
-    # Option B adjusted repayment should differ when paid periods are locked in
-    assert preview_clean["options"][1]["fixed_repayment"] != preview_paid["options"][1]["fixed_repayment"]
+    # Delete the rate change — schedule should revert
+    client.delete(f"/api/loans/{lid}/rates/{rc['id']}")
+    reverted = client.get(f"/api/loans/{lid}/schedule").json()
+    assert reverted["summary"]["total_interest"] == base["summary"]["total_interest"]
+    assert reverted["summary"]["total_repayments"] == base["summary"]["total_repayments"]
 
 
 # --- Health ---

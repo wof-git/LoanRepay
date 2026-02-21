@@ -152,6 +152,32 @@ def calculate_period_interest(
     return round(total_interest, 2), end_rate
 
 
+def get_repayment_at_date(
+    payment_date: date,
+    base_repayment: float | None,
+    rate_changes: list[dict] | None,
+) -> float | None:
+    """Look up the applicable repayment at a given date.
+
+    Rate changes may carry an adjusted_repayment. The most recent one
+    at or before payment_date takes effect. If none have one, returns base_repayment.
+    """
+    if not rate_changes or base_repayment is None:
+        return base_repayment
+    current = base_repayment
+    for rc in sorted(rate_changes, key=lambda x: x["effective_date"]):
+        eff = rc["effective_date"]
+        if isinstance(eff, str):
+            eff = date.fromisoformat(eff)
+        if payment_date >= eff:
+            adj = rc.get("adjusted_repayment")
+            if adj is not None:
+                current = adj
+        else:
+            break
+    return current
+
+
 def get_extras_for_period(
     period_start: date,
     period_end: date,
@@ -184,7 +210,6 @@ def calculate_schedule(
     rate_changes: list[dict] | None = None,
     extra_repayments: list[dict] | None = None,
     paid_set: set[int] | None = None,
-    paid_fixed_repayment: float | None = None,
 ) -> ScheduleResult:
     """Generate a full amortization schedule.
 
@@ -194,12 +219,12 @@ def calculate_schedule(
         frequency: 'weekly', 'fortnightly', or 'monthly'.
         start_date: Loan start date.
         loan_term: Number of periods for PMT calculation.
-        fixed_repayment: User's actual payment amount (None = use calculated PMT).
-        rate_changes: List of {"effective_date": ..., "annual_rate": ...}.
+        fixed_repayment: Base payment amount (None = use calculated PMT).
+            Rate changes with adjusted_repayment override this from their effective date.
+        rate_changes: List of {"effective_date": ..., "annual_rate": ...,
+            "adjusted_repayment": ... (optional)}.
         extra_repayments: List of {"payment_date": ..., "amount": ...}.
         paid_set: Set of repayment numbers that have been marked as paid.
-        paid_fixed_repayment: For paid periods, use this amount instead of fixed_repayment.
-            Locks in historical payments when the repayment amount is being changed.
     """
     if isinstance(start_date, str):
         start_date = date.fromisoformat(start_date)
@@ -227,10 +252,8 @@ def calculate_schedule(
 
         calculated_payment = pmt(rate_per_period, remaining_term, balance)
 
-        # For paid periods, lock in the original repayment amount
-        period_repayment = fixed_repayment
-        if i in paid_set and paid_fixed_repayment is not None:
-            period_repayment = paid_fixed_repayment
+        # Determine repayment for this period — rate changes may override
+        period_repayment = get_repayment_at_date(payment_date, fixed_repayment, rate_changes)
 
         if period_repayment is not None:
             actual_payment = period_repayment
@@ -318,13 +341,15 @@ def find_repayment_for_target_date(
     target_date: date | str,
     rate_changes: list[dict] | None = None,
     extra_repayments: list[dict] | None = None,
-    paid_set: set[int] | None = None,
-    paid_fixed_repayment: float | None = None,
+    fixed_repayment: float | None = None,
+    adjust_rate_idx: int | None = None,
 ) -> dict:
     """Binary search for the repayment amount that pays off by target_date.
 
-    If paid_set and paid_fixed_repayment are provided, paid periods keep
-    the old repayment amount and only unpaid periods use the trial amount.
+    If adjust_rate_idx is set, the search varies rate_changes[idx]["adjusted_repayment"]
+    while keeping fixed_repayment as the base for earlier periods.
+
+    If adjust_rate_idx is None, the search varies fixed_repayment directly (original behavior).
     """
     if isinstance(target_date, str):
         target_date = date.fromisoformat(target_date)
@@ -341,18 +366,33 @@ def find_repayment_for_target_date(
     best = None
     for _ in range(100):
         mid = round((low + high) / 2, 2)
-        sched = calculate_schedule(
-            principal=principal,
-            annual_rate=annual_rate,
-            frequency=frequency,
-            start_date=start_date,
-            loan_term=loan_term,
-            fixed_repayment=mid,
-            rate_changes=rate_changes,
-            extra_repayments=extra_repayments,
-            paid_set=paid_set,
-            paid_fixed_repayment=paid_fixed_repayment,
-        )
+
+        if adjust_rate_idx is not None and rate_changes:
+            # Vary only the adjusted_repayment on the target rate change
+            trial_rates = [dict(rc) for rc in rate_changes]
+            trial_rates[adjust_rate_idx]["adjusted_repayment"] = mid
+            sched = calculate_schedule(
+                principal=principal,
+                annual_rate=annual_rate,
+                frequency=frequency,
+                start_date=start_date,
+                loan_term=loan_term,
+                fixed_repayment=fixed_repayment,
+                rate_changes=trial_rates,
+                extra_repayments=extra_repayments,
+            )
+        else:
+            sched = calculate_schedule(
+                principal=principal,
+                annual_rate=annual_rate,
+                frequency=frequency,
+                start_date=start_date,
+                loan_term=loan_term,
+                fixed_repayment=mid,
+                rate_changes=rate_changes,
+                extra_repayments=extra_repayments,
+            )
+
         if not sched.rows:
             break
         payoff = date.fromisoformat(sched.payoff_date)
