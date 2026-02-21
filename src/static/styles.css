@@ -1,0 +1,78 @@
+/* Custom styles beyond Tailwind */
+
+/* Print stylesheet */
+@media print {
+    .no-print, nav, .sticky-summary, .whatif-panel, button, input[type="checkbox"] {
+        display: none !important;
+    }
+    table { font-size: 10pt; }
+    .year-group { break-inside: avoid; }
+    @page { margin: 1cm; }
+}
+
+/* Row colors */
+tr.paid { background-color: #dcfce7; }
+tr.next-due { background-color: #fef9c3; font-weight: 600; }
+tr.overdue { background-color: #fee2e2; }
+
+/* Summary bar sticky */
+.sticky-summary {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(8px);
+}
+
+/* Smooth transitions */
+.tab-content { animation: fadeIn 0.15s ease-in; }
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Collapsible year groups */
+.year-group-content { overflow: hidden; transition: max-height 0.3s ease; }
+.year-group-content.collapsed { max-height: 0; }
+
+/* Toast notifications */
+.toast {
+    position: fixed;
+    bottom: 1rem;
+    right: 1rem;
+    z-index: 50;
+    animation: slideUp 0.3s ease;
+}
+@keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Responsive table */
+@media (max-width: 768px) {
+    .schedule-table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .summary-cards { flex-direction: column; }
+}
+
+/* Slider styling */
+input[type="range"] {
+    -webkit-appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    background: #d1d5db;
+}
+input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #3b82f6;
+    cursor: pointer;
+}
+
+/* Checkbox styling */
+.paid-checkbox {
+    width: 1.25rem;
+    height: 1.25rem;
+    cursor: pointer;
+    accent-color: #22c55e;
+}

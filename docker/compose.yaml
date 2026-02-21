@@ -1,0 +1,13 @@
+services:
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: loanrepay
+    restart: unless-stopped
+    volumes:
+      - ../data:/app/data
+    ports:
+      - "5050:8000"
+    environment:
+      - DATA_DIR=/app/data

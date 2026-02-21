@@ -1,0 +1,25 @@
+#!/bin/bash
+set -e
+NAS_HOST="wofnasadmin@wofnas.tail6c8ab5.ts.net"
+NAS_PATH="/volume3/Wof/repo/LoanRepay"
+
+echo "=== Syncing files to NAS ==="
+rsync -avz --exclude 'data/' --exclude '__pycache__' --exclude '.git' \
+  --exclude 'tests/' --exclude '.pytest_cache' --exclude '*.pyc' \
+  /home/mark/projects/LoanRepay/ ${NAS_HOST}:${NAS_PATH}/
+
+echo "=== Building and starting on NAS ==="
+ssh ${NAS_HOST} "
+  export PATH=/usr/local/bin:\$PATH
+  cd ${NAS_PATH}
+  mkdir -p data
+  docker compose -f docker/compose.yaml down 2>/dev/null || true
+  docker compose -f docker/compose.yaml up --build -d
+  sleep 5
+  docker compose -f docker/compose.yaml ps
+"
+
+echo "=== Smoke test ==="
+curl -sf http://wofnas.tail6c8ab5.ts.net:5050/health && echo " OK" || echo " FAILED"
+
+echo "=== Deployed to http://wofnas.tail6c8ab5.ts.net:5050/ ==="

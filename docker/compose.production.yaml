@@ -1,0 +1,11 @@
+services:
+  app:
+    image: loanrepay:latest
+    container_name: loanrepay
+    restart: unless-stopped
+    volumes:
+      - /volume3/Wof/repo/LoanRepay/data:/app/data
+    ports:
+      - "5050:8000"
+    environment:
+      - DATA_DIR=/app/data
