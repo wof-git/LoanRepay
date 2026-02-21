@@ -113,6 +113,7 @@ class ScheduleRow(BaseModel):
     principal: float
     interest: float
     rate: float
+    rate_start: float
     calculated_pmt: float
     additional: float
     extra: float

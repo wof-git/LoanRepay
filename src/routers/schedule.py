@@ -79,6 +79,7 @@ def _build_schedule(loan: Loan, db: Session, whatif: WhatIfRequest | None = None
             principal=r.principal,
             interest=r.interest,
             rate=r.rate,
+            rate_start=r.rate_start,
             calculated_pmt=r.calculated_pmt,
             additional=r.additional,
             extra=r.extra,

@@ -300,7 +300,7 @@ def test_interest_prorate_mid_period_rate_change():
     # Rate changes on Mar 9 — 3 days at old rate, 11 days at new rate
     rate_changes = [{"effective_date": "2026-03-09", "annual_rate": 0.06}]
 
-    interest, end_rate = calculate_period_interest(
+    interest, end_rate, start_rate = calculate_period_interest(
         balance, prev_date, payment_date, base_rate, rate_changes, "fortnightly"
     )
 
@@ -311,6 +311,7 @@ def test_interest_prorate_mid_period_rate_change():
     expected = round(30000 * 0.0575 / 365 * 3 + 30000 * 0.06 / 365 * 11, 2)
     assert interest == expected
     assert end_rate == 0.06
+    assert start_rate == 0.0575
 
 
 def test_interest_no_split_matches_original():
@@ -320,7 +321,7 @@ def test_interest_no_split_matches_original():
     payment_date = date(2026, 3, 6)
     base_rate = 0.0575
 
-    interest, end_rate = calculate_period_interest(
+    interest, end_rate, start_rate = calculate_period_interest(
         balance, prev_date, payment_date, base_rate, None, "fortnightly"
     )
 
@@ -328,6 +329,7 @@ def test_interest_no_split_matches_original():
     expected = round(30050.0 * 0.0575 / 26, 2)
     assert interest == expected
     assert end_rate == 0.0575
+    assert start_rate == 0.0575
 
 
 def test_prorate_schedule_differs_from_simple():

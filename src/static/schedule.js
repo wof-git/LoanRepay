@@ -60,6 +60,7 @@ export async function renderSchedule(state, helpers, isWhatIf = false) {
                                 <th class="px-3 py-1 w-8"></th>
                                 <th class="px-2 py-1">#</th>
                                 <th class="px-2 py-1">Date</th>
+                                <th class="px-2 py-1">Rate</th>
                                 <th class="px-2 py-1 text-right hidden sm:table-cell">Balance</th>
                                 <th class="px-2 py-1 text-right">Repayment</th>
                                 <th class="px-2 py-1 text-right">Interest</th>
@@ -86,6 +87,7 @@ export async function renderSchedule(state, helpers, isWhatIf = false) {
                 </td>
                 <td class="px-2 py-1 text-gray-500">${row.number}</td>
                 <td class="px-2 py-1">${fmtDate(row.date)}</td>
+                <td class="px-2 py-1 text-xs ${row.rate_start !== row.rate ? 'text-violet-600 font-medium' : 'text-gray-400'}">${row.rate_start !== row.rate ? `${fmtPct(row.rate_start)}/${fmtPct(row.rate)}` : fmtPct(row.rate)}</td>
                 <td class="px-2 py-1 text-right hidden sm:table-cell">${fmtMoney(row.opening_balance)}</td>
                 <td class="px-2 py-1 text-right font-medium">${fmtMoney(row.principal + row.interest)}</td>
                 <td class="px-2 py-1 text-right text-orange-600">${fmtMoney(row.interest)}</td>

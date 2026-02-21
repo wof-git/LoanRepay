@@ -16,6 +16,7 @@ class ScheduleRow:
     principal: float
     interest: float
     rate: float
+    rate_start: float
     calculated_pmt: float
     additional: float
     extra: float
@@ -98,10 +99,10 @@ def calculate_period_interest(
     base_rate: float,
     rate_changes: list[dict] | None,
     frequency: str,
-) -> tuple[float, float]:
+) -> tuple[float, float, float]:
     """Calculate interest for a period, pro-rating if a rate change falls mid-period.
 
-    Returns (interest, end_of_period_rate).
+    Returns (interest, end_of_period_rate, start_of_period_rate).
 
     If no rate change boundary falls strictly within (prev_date, payment_date),
     uses the simple balance * rate / periods_per_year formula (matching Excel).
@@ -111,9 +112,10 @@ def calculate_period_interest(
     """
     ppy = periods_per_year(frequency)
     end_rate = get_rate_at_date(payment_date, base_rate, rate_changes)
+    start_rate = get_rate_at_date(prev_date, base_rate, rate_changes)
 
     if not rate_changes:
-        return round(balance * end_rate / ppy, 2), end_rate
+        return round(balance * end_rate / ppy, 2), end_rate, start_rate
 
     # Collect rate boundaries that fall strictly within (prev_date, payment_date)
     boundaries = []
@@ -127,7 +129,7 @@ def calculate_period_interest(
 
     if not boundaries:
         # No mid-period rate change — use simple formula
-        return round(balance * end_rate / ppy, 2), end_rate
+        return round(balance * end_rate / ppy, 2), end_rate, start_rate
 
     # Split the period into sub-intervals and sum daily interest
     total_interest = 0.0
@@ -143,7 +145,7 @@ def calculate_period_interest(
     sub_rate = get_rate_at_date(interval_start, base_rate, rate_changes)
     total_interest += balance * sub_rate / 365 * days
 
-    return round(total_interest, 2), end_rate
+    return round(total_interest, 2), end_rate, start_rate
 
 
 def get_repayment_at_date(
@@ -259,7 +261,7 @@ def calculate_schedule(
         payment_date = add_period(start_date, frequency, i)
         prev_payment_date = add_period(start_date, frequency, i - 1) if i > 1 else start_date
 
-        interest, current_rate = calculate_period_interest(
+        interest, current_rate, start_rate = calculate_period_interest(
             balance, prev_payment_date, payment_date, annual_rate, rate_changes, frequency
         )
         rate_per_period = current_rate / ppy
@@ -316,6 +318,7 @@ def calculate_schedule(
             principal=principal_from_payment,
             interest=interest,
             rate=current_rate,
+            rate_start=start_rate,
             calculated_pmt=calculated_payment,
             additional=additional,
             extra=extra,
