@@ -21,16 +21,14 @@ ssh ${NAS_HOST} "
   docker compose -f docker/compose.yaml ps
 "
 
-echo "=== Setting up daily backup cron ==="
+echo "=== Setting up backup directory ==="
 ssh ${NAS_HOST} "
   mkdir -p ${NAS_PATH}/backups
   chmod +x ${NAS_PATH}/scripts/backup.sh
-  # Remove any existing LoanRepay backup cron entry, then add fresh
-  (crontab -l 2>/dev/null | grep -v '${NAS_PATH}/scripts/backup.sh') | crontab -
-  (crontab -l 2>/dev/null; echo '0 2 * * * ${NAS_PATH}/scripts/backup.sh >> ${NAS_PATH}/backups/backup.log 2>&1') | crontab -
-  echo 'Cron installed:'
-  crontab -l | grep backup
 "
+echo "NOTE: Configure daily backup via Synology DSM Task Scheduler if not already set up:"
+echo "  Command: ${NAS_PATH}/scripts/backup.sh >> ${NAS_PATH}/backups/backup.log 2>&1"
+echo "  Schedule: Daily at 2:00 AM"
 
 echo "=== Smoke test ==="
 curl -sf http://wofnas.tail6c8ab5.ts.net:5050/health && echo " OK" || echo " FAILED"
