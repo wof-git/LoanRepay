@@ -45,17 +45,15 @@ def test_compare_scenarios(page):
     page.click("button:has-text('Scenarios')")
     page.wait_for_timeout(500)
 
-    # Select both scenarios via JS (inline onchange handler has a known
-    # module loading issue where app.js overwrites window.app after scenarios.js)
-    checkboxes = page.locator("input.scenario-check")
+    # Select both scenarios by clicking checkboxes
+    checkboxes = page.locator("#scenarios-list input[type=checkbox]")
     expect(checkboxes).to_have_count(2)
-    page.evaluate("""() => {
-        document.querySelectorAll('input.scenario-check').forEach(cb => {
-            const id = parseInt(cb.value);
-            window.app.state.selectedScenarios.add(id);
-        });
-    }""")
-    page.evaluate("window.app.compareSelected()")
+    checkboxes.nth(0).check()
+    checkboxes.nth(1).check()
+    page.wait_for_timeout(300)
+
+    # Compare
+    page.click("button:has-text('Compare Selected')")
     page.wait_for_timeout(1000)
 
     # Verify comparison view shows

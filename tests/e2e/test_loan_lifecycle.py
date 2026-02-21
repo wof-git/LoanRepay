@@ -84,8 +84,8 @@ def test_add_rate_change(page):
     page.click("button:has-text('Schedule')")
     page.wait_for_timeout(500)
 
-    # Note initial total interest
-    initial = page.locator(".total-interest").text_content()
+    # Note initial total interest from export bar
+    initial = page.locator("text=Total Interest:").text_content()
 
     # Add rate change (click the "+ Add" button in the Rate Changes section)
     page.locator(".bg-violet-50 button:has-text('+ Add')").click()
@@ -98,7 +98,7 @@ def test_add_rate_change(page):
     page.wait_for_timeout(500)
 
     # Verify interest changed
-    new_interest = page.locator(".total-interest").text_content()
+    new_interest = page.locator("text=Total Interest:").text_content()
     assert new_interest != initial
 
 

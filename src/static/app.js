@@ -983,7 +983,7 @@ async function compareSelected() {
     const ids = [...state.selectedScenarios].join(',');
     try {
         const data = await api(`/loans/${state.currentLoanId}/scenarios/compare?ids=${ids}`);
-        renderScenarios(state, { fmtMoney, fmtDate, api, apiJson, toast, showModal, closeModal }, data);
+        renderScenarios(state, { fmtMoney, fmtDate, escapeHtml, api, apiJson, toast, showModal, closeModal }, data);
     } catch (e) {
         toast('Failed: ' + e.message, 'error');
     }

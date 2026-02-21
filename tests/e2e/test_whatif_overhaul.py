@@ -267,15 +267,12 @@ def test_two_whatif_scenarios_have_different_interest(page):
     # Verify both scenario names appear
     expect(page.locator("text=Base")).to_be_visible()
     expect(page.locator("text=Pay $800")).to_be_visible()
-    # Select both and compare via JS (inline onchange handler has a known
-    # module loading issue where app.js overwrites window.app after scenarios.js)
-    page.evaluate("""() => {
-        document.querySelectorAll('input.scenario-check').forEach(cb => {
-            const id = parseInt(cb.value);
-            window.app.state.selectedScenarios.add(id);
-        });
-    }""")
-    page.evaluate("window.app.compareSelected()")
+    # Select both and compare by clicking checkboxes
+    checkboxes = page.locator("#scenarios-list input[type=checkbox]")
+    checkboxes.nth(0).check()
+    checkboxes.nth(1).check()
+    page.wait_for_timeout(300)
+    page.click("button:has-text('Compare Selected')")
     page.wait_for_timeout(1000)
     expect(page.locator("#comparison-view")).to_be_visible()
 
