@@ -1,3 +1,4 @@
 #!/bin/sh
 mkdir -p /app/data
-exec "$@"
+chown -R appuser /app/data
+exec gosu appuser "$@"
