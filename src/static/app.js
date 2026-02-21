@@ -78,6 +78,34 @@ function fmtPct(n) {
     return (n * 100).toFixed(2) + '%';
 }
 
+// --- PMT Calculation ---
+
+function calcPMT(principal, annualRatePct, frequency, loanTerm) {
+    const ppy = frequency === 'weekly' ? 52 : frequency === 'fortnightly' ? 26 : 12;
+    const r = (annualRatePct / 100) / ppy;
+    const n = loanTerm;
+    if (n <= 0 || principal <= 0) return null;
+    if (Math.abs(r) < 1e-12) return Math.round(principal / n * 100) / 100;
+    const payment = principal * r * Math.pow(1 + r, n) / (Math.pow(1 + r, n) - 1);
+    return Math.round(payment * 100) / 100;
+}
+
+function _calcAndFillRepayment(formId) {
+    const form = document.getElementById(formId);
+    const principal = parseFloat(form.querySelector('[name="principal"]').value);
+    const rate = parseFloat(form.querySelector('[name="annual_rate"]').value);
+    const frequency = form.querySelector('[name="frequency"]').value;
+    const term = parseInt(form.querySelector('[name="loan_term"]').value);
+    if (!principal || !rate || !frequency || !term) {
+        toast('Fill in principal, rate, frequency, and term first', 'error');
+        return;
+    }
+    const pmt = calcPMT(principal, rate, frequency, term);
+    if (pmt) {
+        form.querySelector('[name="fixed_repayment"]').value = pmt.toFixed(2);
+    }
+}
+
 // --- Loan Loading ---
 
 async function loadLoans() {
@@ -202,8 +230,11 @@ function showCreateLoan() {
             <div class="grid grid-cols-2 gap-3">
                 <div><label class="block text-sm text-gray-600">Loan Term (periods)</label>
                     <input name="loan_term" type="number" required class="w-full border rounded px-3 py-1.5 text-sm" placeholder="52"></div>
-                <div><label class="block text-sm text-gray-600">Fixed Repayment ($, optional)</label>
-                    <input name="fixed_repayment" type="number" step="0.01" class="w-full border rounded px-3 py-1.5 text-sm" placeholder="612.39"></div>
+                <div><label class="block text-sm text-gray-600">Fixed Repayment ($)</label>
+                    <div class="flex gap-1">
+                        <input name="fixed_repayment" type="number" step="0.01" class="w-full border rounded px-3 py-1.5 text-sm" placeholder="Auto-calc">
+                        <button type="button" onclick="app._calcAndFillRepayment('create-loan-form')" class="bg-gray-200 hover:bg-gray-300 px-2 py-1.5 rounded text-xs font-medium whitespace-nowrap" title="Calculate PMT from principal, rate, frequency and term">Calc</button>
+                    </div></div>
             </div>
             <div class="flex gap-2 pt-2">
                 <button type="submit" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Create Loan</button>
@@ -265,7 +296,10 @@ function showEditLoan() {
                 <div><label class="block text-sm text-gray-600">Loan Term</label>
                     <input name="loan_term" type="number" value="${loan.loan_term}" required class="w-full border rounded px-3 py-1.5 text-sm"></div>
                 <div><label class="block text-sm text-gray-600">Fixed Repayment ($)</label>
-                    <input name="fixed_repayment" type="number" step="0.01" value="${loan.fixed_repayment || ''}" class="w-full border rounded px-3 py-1.5 text-sm"></div>
+                    <div class="flex gap-1">
+                        <input name="fixed_repayment" type="number" step="0.01" value="${loan.fixed_repayment || ''}" class="w-full border rounded px-3 py-1.5 text-sm">
+                        <button type="button" onclick="app._calcAndFillRepayment('edit-loan-form')" class="bg-gray-200 hover:bg-gray-300 px-2 py-1.5 rounded text-xs font-medium whitespace-nowrap" title="Calculate PMT from principal, rate, frequency and term">Calc</button>
+                    </div></div>
             </div>
             <div class="flex gap-2 pt-2">
                 <button type="submit" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Save</button>
@@ -804,7 +838,7 @@ window.app = {
     toggleWhatIf, onWhatIfChange, applyWhatIf,
     saveWhatIfScenario, resetWhatIf, calcPayoffTarget,
     showAddRateChange, deleteRateChange, showAddExtra, deleteExtra,
-    compareSelected, exportSchedule, _togglePaid,
+    compareSelected, exportSchedule, _togglePaid, _calcAndFillRepayment,
     // State access for child modules
     get state() { return state; },
     fmtMoney, fmtDate, fmtPct, api, apiJson, toast, loadSchedule,
