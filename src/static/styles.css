@@ -36,10 +36,6 @@ tr.overdue td { background-color: #fee2e2 !important; }
 
 /* Toast notifications */
 .toast {
-    position: fixed;
-    bottom: 1rem;
-    right: 1rem;
-    z-index: 50;
     animation: slideUp 0.3s ease;
 }
 @keyframes slideUp {

@@ -689,8 +689,10 @@ async function calcPayoffTarget() {
     if (!targetDate || !state.currentLoanId) return;
     try {
         const result = await api(`/loans/${state.currentLoanId}/payoff-target?date=${targetDate}`);
+        const loan = state.loans.find(l => l.id === state.currentLoanId);
+        const freqLabel = loan?.frequency === 'weekly' ? 'per week' : loan?.frequency === 'monthly' ? 'per month' : 'per fortnight';
         document.getElementById('payoff-result').textContent =
-            `Need ${fmtMoney(result.required_repayment)} per fortnight (${result.num_repayments} payments, ${fmtMoney(result.total_interest)} interest)`;
+            `Need ${fmtMoney(result.required_repayment)} ${freqLabel} (${result.num_repayments} payments, ${fmtMoney(result.total_interest)} interest)`;
     } catch (e) {
         document.getElementById('payoff-result').textContent = e.message;
     }
@@ -1018,11 +1020,7 @@ async function compareSelected() {
 async function _togglePaid(num, checked) {
     if (!state.currentLoanId) return;
     try {
-        if (checked) {
-            await fetch(`${API}/loans/${state.currentLoanId}/paid/${num}`, { method: 'POST' });
-        } else {
-            await fetch(`${API}/loans/${state.currentLoanId}/paid/${num}`, { method: 'DELETE' });
-        }
+        await api(`/loans/${state.currentLoanId}/paid/${num}`, { method: checked ? 'POST' : 'DELETE' });
         await loadSchedule();
         switchTab('schedule');
     } catch (e) {
@@ -1037,6 +1035,28 @@ function exportSchedule(format) {
     window.open(`${API}/loans/${state.currentLoanId}/export?format=${format}`, '_blank');
 }
 
+// --- Scenario Helpers ---
+
+function _toggleScenario(id, checked) {
+    if (checked) {
+        state.selectedScenarios.add(id);
+    } else {
+        state.selectedScenarios.delete(id);
+    }
+    document.getElementById('btn-compare').classList.toggle('hidden', state.selectedScenarios.size < 2);
+}
+
+async function _deleteScenario(id) {
+    try {
+        await api(`/loans/${state.currentLoanId}/scenarios/${id}`, { method: 'DELETE' });
+        state.selectedScenarios.delete(id);
+        toast('Scenario deleted', 'success');
+        switchTab('scenarios');
+    } catch (e) {
+        toast('Failed: ' + e.message, 'error');
+    }
+}
+
 // --- Global Exports ---
 
 window.app = {
@@ -1048,6 +1068,7 @@ window.app = {
     showAddRepaymentChange, deleteRepaymentChange,
     showAddExtra, deleteExtra,
     compareSelected, exportSchedule, _togglePaid, _calcAndFillRepayment,
+    _toggleScenario, _deleteScenario,
     // State access for child modules
     get state() { return state; },
     fmtMoney, fmtDate, fmtPct, api, apiJson, toast, loadSchedule,

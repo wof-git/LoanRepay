@@ -7,7 +7,7 @@ class LoanCreate(BaseModel):
     principal: float = Field(gt=0)
     annual_rate: float = Field(ge=0)
     frequency: str = Field(pattern="^(weekly|fortnightly|monthly)$")
-    start_date: str
+    start_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
     loan_term: int = Field(gt=0)
     fixed_repayment: Optional[float] = Field(default=None, gt=0)
 
@@ -17,9 +17,9 @@ class LoanUpdate(BaseModel):
     principal: Optional[float] = Field(default=None, gt=0)
     annual_rate: Optional[float] = Field(default=None, ge=0)
     frequency: Optional[str] = Field(default=None, pattern="^(weekly|fortnightly|monthly)$")
-    start_date: Optional[str] = None
+    start_date: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
     loan_term: Optional[int] = Field(default=None, gt=0)
-    fixed_repayment: Optional[float] = None
+    fixed_repayment: Optional[float] = Field(default=None, gt=0)
 
 
 class LoanResponse(BaseModel):
@@ -46,16 +46,16 @@ class LoanDetailResponse(LoanResponse):
 
 
 class RateChangeCreate(BaseModel):
-    effective_date: str
+    effective_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
     annual_rate: float = Field(ge=0)
     adjusted_repayment: Optional[float] = Field(default=None, gt=0)
     note: Optional[str] = None
 
 
 class RateChangeUpdate(BaseModel):
-    effective_date: Optional[str] = None
+    effective_date: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
     annual_rate: Optional[float] = Field(default=None, ge=0)
-    adjusted_repayment: Optional[float] = None
+    adjusted_repayment: Optional[float] = Field(default=None, gt=0)
     note: Optional[str] = None
 
 
@@ -72,13 +72,13 @@ class RateChangeResponse(BaseModel):
 
 
 class ExtraRepaymentCreate(BaseModel):
-    payment_date: str
+    payment_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
     amount: float = Field(gt=0)
     note: Optional[str] = None
 
 
 class ExtraRepaymentUpdate(BaseModel):
-    payment_date: Optional[str] = None
+    payment_date: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
     amount: Optional[float] = Field(default=None, gt=0)
     note: Optional[str] = None
 
@@ -95,7 +95,7 @@ class ExtraRepaymentResponse(BaseModel):
 
 
 class RepaymentChangeCreate(BaseModel):
-    effective_date: str
+    effective_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
     amount: float = Field(gt=0)
     note: Optional[str] = None
 

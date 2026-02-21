@@ -134,12 +134,6 @@ def calculate_period_interest(
     interval_start = prev_date
     for boundary in boundaries:
         days = (boundary - interval_start).days
-        rate_at_start = get_rate_at_date(interval_start if interval_start == prev_date else interval_start, base_rate, rate_changes)
-        # For the first sub-interval, use the rate effective at prev_date
-        # (actually the day after prev_date, but get_rate_at_date uses >=)
-        # We need the rate in effect during (interval_start, boundary)
-        # That's the rate at interval_start (since rate changes take effect on their date)
-        # But if interval_start IS prev_date, the rate is whatever was in effect then
         sub_rate = get_rate_at_date(interval_start, base_rate, rate_changes)
         total_interest += balance * sub_rate / 365 * days
         interval_start = boundary
@@ -287,7 +281,8 @@ def calculate_schedule(
             actual_payment = calculated_payment
             additional = 0.0
 
-        extra = get_extras_for_period(prev_payment_date, payment_date, extra_repayments)
+        extra_start = prev_payment_date if i > 1 else prev_payment_date - timedelta(days=1)
+        extra = get_extras_for_period(extra_start, payment_date, extra_repayments)
 
         principal_from_payment = round(actual_payment - interest, 2)
         total_principal = principal_from_payment + extra

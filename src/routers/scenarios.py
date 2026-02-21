@@ -24,7 +24,7 @@ def save_scenario(loan_id: int, body: ScenarioCreate, db: Session = Depends(get_
         raise HTTPException(status_code=404, detail="Loan not found")
 
     whatif = None
-    if any([body.whatif_fixed_repayment, body.whatif_additional_rate_changes, body.whatif_additional_extra_repayments]):
+    if body.whatif_fixed_repayment is not None or body.whatif_additional_rate_changes is not None or body.whatif_additional_extra_repayments is not None:
         from src.schemas import WhatIfRequest
         whatif = WhatIfRequest(
             fixed_repayment=body.whatif_fixed_repayment,
@@ -43,7 +43,7 @@ def save_scenario(loan_id: int, body: ScenarioCreate, db: Session = Depends(get_
         "frequency": loan.frequency,
         "start_date": loan.start_date,
         "loan_term": loan.loan_term,
-        "fixed_repayment": body.whatif_fixed_repayment if body.whatif_fixed_repayment else loan.fixed_repayment,
+        "fixed_repayment": body.whatif_fixed_repayment if body.whatif_fixed_repayment is not None else loan.fixed_repayment,
         "rate_changes": [
             {"effective_date": rc.effective_date, "annual_rate": rc.annual_rate, "adjusted_repayment": rc.adjusted_repayment, "note": rc.note}
             for rc in db_rates
@@ -58,15 +58,15 @@ def save_scenario(loan_id: int, body: ScenarioCreate, db: Session = Depends(get_
         ],
     }
 
-    if any([body.whatif_fixed_repayment, body.whatif_additional_rate_changes, body.whatif_additional_extra_repayments]):
+    if body.whatif_fixed_repayment is not None or body.whatif_additional_rate_changes is not None or body.whatif_additional_extra_repayments is not None:
         config["whatif_overrides"] = {}
-        if body.whatif_fixed_repayment:
+        if body.whatif_fixed_repayment is not None:
             config["whatif_overrides"]["fixed_repayment"] = body.whatif_fixed_repayment
-        if body.whatif_additional_rate_changes:
+        if body.whatif_additional_rate_changes is not None:
             config["whatif_overrides"]["additional_rate_changes"] = [
                 {"effective_date": rc.effective_date, "annual_rate": rc.annual_rate} for rc in body.whatif_additional_rate_changes
             ]
-        if body.whatif_additional_extra_repayments:
+        if body.whatif_additional_extra_repayments is not None:
             config["whatif_overrides"]["additional_extra_repayments"] = [
                 {"payment_date": er.payment_date, "amount": er.amount} for er in body.whatif_additional_extra_repayments
             ]
@@ -104,7 +104,10 @@ def compare_scenarios(loan_id: int, ids: str = Query(...), db: Session = Depends
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
 
-    id_list = [int(x.strip()) for x in ids.split(",") if x.strip()]
+    try:
+        id_list = [int(x.strip()) for x in ids.split(",") if x.strip()]
+    except ValueError:
+        raise HTTPException(status_code=422, detail="Invalid scenario IDs — must be comma-separated integers")
     scenarios = db.query(Scenario).filter(Scenario.id.in_(id_list), Scenario.loan_id == loan_id).all()
 
     if len(scenarios) < 2:

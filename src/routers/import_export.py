@@ -1,6 +1,8 @@
 import csv
 import io
 import json
+import logging
+import re
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -8,6 +10,9 @@ from src.database import get_db
 from src.models import Loan
 from src.schemas import LoanResponse
 from src.routers.schedule import _build_schedule
+
+logger = logging.getLogger(__name__)
+MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
 
 router = APIRouter(prefix="/api/loans", tags=["import_export"])
 
@@ -20,6 +25,8 @@ async def import_spreadsheet(file: UploadFile = File(...), db: Session = Depends
     try:
         import openpyxl
         contents = await file.read()
+        if len(contents) > MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail=f"File too large (max {MAX_UPLOAD_BYTES // 1024 // 1024} MB)")
         wb = openpyxl.load_workbook(io.BytesIO(contents), data_only=True)
         ws = wb.active
 
@@ -34,6 +41,8 @@ async def import_spreadsheet(file: UploadFile = File(...), db: Session = Depends
 
         if loan_amount is None:
             raise HTTPException(status_code=422, detail="Expected loan amount in B1, found: empty")
+        if start_date is None:
+            raise HTTPException(status_code=422, detail="Expected start date in B2, found: empty")
         if total_periods is None:
             raise HTTPException(status_code=422, detail="Expected total periods in G2, found: empty")
 
@@ -88,7 +97,8 @@ async def import_spreadsheet(file: UploadFile = File(...), db: Session = Depends
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=422, detail=f"Failed to parse spreadsheet: {str(e)}")
+        logger.error(f"Spreadsheet import failed: {e}", exc_info=True)
+        raise HTTPException(status_code=422, detail="Failed to parse spreadsheet. Check the file format matches the expected layout.")
 
 
 @router.get("/{loan_id}/export")
@@ -98,6 +108,7 @@ def export_schedule(loan_id: int, format: str = Query("csv"), db: Session = Depe
         raise HTTPException(status_code=404, detail="Loan not found")
 
     schedule = _build_schedule(loan, db)
+    safe_name = re.sub(r'[^\w\s\-]', '', loan.name).strip() or 'schedule'
 
     if format == "csv":
         output = io.StringIO()
@@ -116,7 +127,7 @@ def export_schedule(loan_id: int, format: str = Query("csv"), db: Session = Depe
         return StreamingResponse(
             iter([output.getvalue()]),
             media_type="text/csv",
-            headers={"Content-Disposition": f"attachment; filename={loan.name}_schedule.csv"},
+            headers={"Content-Disposition": f'attachment; filename="{safe_name}_schedule.csv"'},
         )
 
     elif format == "xlsx":
@@ -143,7 +154,7 @@ def export_schedule(loan_id: int, format: str = Query("csv"), db: Session = Depe
             return StreamingResponse(
                 output,
                 media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                headers={"Content-Disposition": f"attachment; filename={loan.name}_schedule.xlsx"},
+                headers={"Content-Disposition": f'attachment; filename="{safe_name}_schedule.xlsx"'},
             )
         except ImportError:
             raise HTTPException(status_code=500, detail="openpyxl not installed for xlsx export")

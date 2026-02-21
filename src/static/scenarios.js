@@ -99,25 +99,3 @@ function renderComparison(data, { fmtMoney, fmtDate }) {
     });
 }
 
-// Global handlers
-window.app = window.app || {};
-
-window.app._toggleScenario = function(id, checked) {
-    if (checked) {
-        window.app.state.selectedScenarios.add(id);
-    } else {
-        window.app.state.selectedScenarios.delete(id);
-    }
-    document.getElementById('btn-compare').classList.toggle('hidden', window.app.state.selectedScenarios.size < 2);
-};
-
-window.app._deleteScenario = async function(id) {
-    try {
-        await fetch(`/api/loans/${window.app.state.currentLoanId}/scenarios/${id}`, { method: 'DELETE' });
-        window.app.state.selectedScenarios.delete(id);
-        window.app.toast('Scenario deleted', 'success');
-        window.app.switchTab('scenarios');
-    } catch (e) {
-        window.app.toast('Failed: ' + e.message, 'error');
-    }
-};

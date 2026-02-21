@@ -19,7 +19,7 @@ def _build_schedule(loan: Loan, db: Session, whatif: WhatIfRequest | None = None
     """Build schedule from loan + DB data, optionally with what-if overrides."""
     # Get rate changes
     if whatif and whatif.rate_changes is not None:
-        rate_changes = [{"effective_date": rc.effective_date, "annual_rate": rc.annual_rate} for rc in whatif.rate_changes]
+        rate_changes = [{"effective_date": rc.effective_date, "annual_rate": rc.annual_rate, "adjusted_repayment": rc.adjusted_repayment} for rc in whatif.rate_changes]
     else:
         db_rates = db.query(RateChange).filter(RateChange.loan_id == loan.id).all()
         rate_changes = [{"effective_date": rc.effective_date, "annual_rate": rc.annual_rate, "adjusted_repayment": rc.adjusted_repayment} for rc in db_rates]
@@ -27,7 +27,7 @@ def _build_schedule(loan: Loan, db: Session, whatif: WhatIfRequest | None = None
     # Merge additional what-if rate changes (additive, not replacing)
     if whatif and whatif.additional_rate_changes:
         for rc in whatif.additional_rate_changes:
-            rate_changes.append({"effective_date": rc.effective_date, "annual_rate": rc.annual_rate})
+            rate_changes.append({"effective_date": rc.effective_date, "annual_rate": rc.annual_rate, "adjusted_repayment": rc.adjusted_repayment})
 
     # Get extra repayments
     if whatif and whatif.extra_repayments is not None:
@@ -334,7 +334,7 @@ def payoff_target(loan_id: int, target_date: str = Query(..., alias="date"), db:
         raise HTTPException(status_code=404, detail="Loan not found")
 
     db_rates = db.query(RateChange).filter(RateChange.loan_id == loan.id).all()
-    rate_changes = [{"effective_date": rc.effective_date, "annual_rate": rc.annual_rate} for rc in db_rates]
+    rate_changes = [{"effective_date": rc.effective_date, "annual_rate": rc.annual_rate, "adjusted_repayment": rc.adjusted_repayment} for rc in db_rates]
 
     db_extras = db.query(ExtraRepayment).filter(ExtraRepayment.loan_id == loan.id).all()
     extras = [{"payment_date": er.payment_date, "amount": er.amount} for er in db_extras]

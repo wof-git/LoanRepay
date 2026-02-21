@@ -1,14 +1,15 @@
-export function renderSchedule(state, helpers, isWhatIf = false) {
+export async function renderSchedule(state, helpers, isWhatIf = false) {
     const { fmtMoney, fmtDate, fmtPct, api, apiJson, toast, loadSchedule, showModal, closeModal } = helpers;
-    const s = isWhatIf ? state.schedule : state.schedule;
+    const s = state.schedule;
     if (!s) return;
 
     const today = new Date().toISOString().split('T')[0];
 
-    // Render rate changes, repayment changes, extras lists
-    renderRateChanges(state, helpers);
-    renderRepaymentChanges(state, helpers);
-    renderExtras(state, helpers);
+    // Render rate changes, repayment changes, extras lists (fetch loan once)
+    const loan = await api(`/loans/${state.currentLoanId}`);
+    renderRateChanges(loan, state, helpers);
+    renderRepaymentChanges(loan, state, helpers);
+    renderExtras(loan, state, helpers);
 
     // Group rows by year
     const yearGroups = {};
@@ -98,73 +99,60 @@ export function renderSchedule(state, helpers, isWhatIf = false) {
 
     container.innerHTML = html;
 
-    // Auto-scroll to next payment
-    setTimeout(() => {
-        const nextRow = document.getElementById('next-payment-row');
-        if (nextRow) nextRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }, 100);
+    // Auto-scroll to next payment (skip during what-if debounce)
+    if (!isWhatIf) {
+        setTimeout(() => {
+            const nextRow = document.getElementById('next-payment-row');
+            if (nextRow) nextRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
+    }
 }
 
-async function renderRateChanges(state, { fmtDate, fmtPct, api }) {
+function renderRateChanges(loan, state, { fmtDate, fmtPct }) {
     const container = document.getElementById('rate-changes-list');
     if (!state.currentLoanId) { container.innerHTML = ''; return; }
 
-    try {
-        const loan = await api(`/loans/${state.currentLoanId}`);
-        if (!loan.rate_changes || loan.rate_changes.length === 0) {
-            container.innerHTML = '<span class="text-gray-400">No rate changes</span>';
-            return;
-        }
-        container.innerHTML = loan.rate_changes.map(rc => `
-            <div class="flex justify-between items-center py-1 border-b last:border-0">
-                <span>${fmtDate(rc.effective_date)} → ${fmtPct(rc.annual_rate)} ${rc.note ? `<span class="text-gray-400">(${rc.note})</span>` : ''}</span>
-                <button onclick="app.deleteRateChange(${rc.id})" class="text-red-400 hover:text-red-600 text-xs">Remove</button>
-            </div>
-        `).join('');
-    } catch (e) {
-        container.innerHTML = '<span class="text-red-400">Failed to load</span>';
+    if (!loan.rate_changes || loan.rate_changes.length === 0) {
+        container.innerHTML = '<span class="text-gray-400">No rate changes</span>';
+        return;
     }
+    container.innerHTML = loan.rate_changes.map(rc => `
+        <div class="flex justify-between items-center py-1 border-b last:border-0">
+            <span>${fmtDate(rc.effective_date)} → ${fmtPct(rc.annual_rate)} ${rc.note ? `<span class="text-gray-400">(${rc.note})</span>` : ''}</span>
+            <button onclick="app.deleteRateChange(${rc.id})" class="text-red-400 hover:text-red-600 text-xs">Remove</button>
+        </div>
+    `).join('');
 }
 
-async function renderRepaymentChanges(state, { fmtDate, fmtMoney, api }) {
+function renderRepaymentChanges(loan, state, { fmtDate, fmtMoney }) {
     const container = document.getElementById('repayment-changes-list');
     if (!state.currentLoanId) { container.innerHTML = ''; return; }
 
-    try {
-        const loan = await api(`/loans/${state.currentLoanId}`);
-        if (!loan.repayment_changes || loan.repayment_changes.length === 0) {
-            container.innerHTML = '<span class="text-gray-400">No repayment changes</span>';
-            return;
-        }
-        container.innerHTML = loan.repayment_changes.map(rc => `
-            <div class="flex justify-between items-center py-1 border-b last:border-0">
-                <span>${fmtDate(rc.effective_date)} → ${fmtMoney(rc.amount)}/period ${rc.note ? `<span class="text-gray-400">(${rc.note})</span>` : ''}</span>
-                <button onclick="app.deleteRepaymentChange(${rc.id})" class="text-red-400 hover:text-red-600 text-xs">Remove</button>
-            </div>
-        `).join('');
-    } catch (e) {
-        container.innerHTML = '<span class="text-red-400">Failed to load</span>';
+    if (!loan.repayment_changes || loan.repayment_changes.length === 0) {
+        container.innerHTML = '<span class="text-gray-400">No repayment changes</span>';
+        return;
     }
+    container.innerHTML = loan.repayment_changes.map(rc => `
+        <div class="flex justify-between items-center py-1 border-b last:border-0">
+            <span>${fmtDate(rc.effective_date)} → ${fmtMoney(rc.amount)}/period ${rc.note ? `<span class="text-gray-400">(${rc.note})</span>` : ''}</span>
+            <button onclick="app.deleteRepaymentChange(${rc.id})" class="text-red-400 hover:text-red-600 text-xs">Remove</button>
+        </div>
+    `).join('');
 }
 
-async function renderExtras(state, { fmtDate, fmtMoney, api }) {
+function renderExtras(loan, state, { fmtDate, fmtMoney }) {
     const container = document.getElementById('extras-list');
     if (!state.currentLoanId) { container.innerHTML = ''; return; }
 
-    try {
-        const loan = await api(`/loans/${state.currentLoanId}`);
-        if (!loan.extra_repayments || loan.extra_repayments.length === 0) {
-            container.innerHTML = '<span class="text-gray-400">No extra repayments</span>';
-            return;
-        }
-        container.innerHTML = loan.extra_repayments.map(er => `
-            <div class="flex justify-between items-center py-1 border-b last:border-0">
-                <span>${fmtDate(er.payment_date)} → ${fmtMoney(er.amount)} ${er.note ? `<span class="text-gray-400">(${er.note})</span>` : ''}</span>
-                <button onclick="app.deleteExtra(${er.id})" class="text-red-400 hover:text-red-600 text-xs">Remove</button>
-            </div>
-        `).join('');
-    } catch (e) {
-        container.innerHTML = '<span class="text-red-400">Failed to load</span>';
+    if (!loan.extra_repayments || loan.extra_repayments.length === 0) {
+        container.innerHTML = '<span class="text-gray-400">No extra repayments</span>';
+        return;
     }
+    container.innerHTML = loan.extra_repayments.map(er => `
+        <div class="flex justify-between items-center py-1 border-b last:border-0">
+            <span>${fmtDate(er.payment_date)} → ${fmtMoney(er.amount)} ${er.note ? `<span class="text-gray-400">(${er.note})</span>` : ''}</span>
+            <button onclick="app.deleteExtra(${er.id})" class="text-red-400 hover:text-red-600 text-xs">Remove</button>
+        </div>
+    `).join('');
 }
 
