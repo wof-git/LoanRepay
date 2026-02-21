@@ -3,10 +3,12 @@ set -e
 NAS_HOST="WOFNASadmin@wofnas.tail6c8ab5.ts.net"
 NAS_PATH="/volume3/Wof/repo/LoanRepay"
 
-echo "=== Syncing files to NAS ==="
-rsync -avz --exclude 'data/' --exclude '__pycache__' --exclude '.git' \
-  --exclude 'tests/' --exclude '.pytest_cache' --exclude '*.pyc' \
-  /home/mark/projects/LoanRepay/ ${NAS_HOST}:${NAS_PATH}/
+echo "=== Pulling latest from Gitea on NAS ==="
+ssh ${NAS_HOST} "
+  export PATH=/usr/local/bin:\$PATH
+  cd ${NAS_PATH}
+  git pull origin master
+"
 
 echo "=== Building and starting on NAS ==="
 ssh ${NAS_HOST} "
