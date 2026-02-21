@@ -1,5 +1,6 @@
 from datetime import datetime
-from fastapi import APIRouter, Depends, HTTPException
+from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from src.database import get_db
 from src.models import Loan, RateChange, ExtraRepayment
@@ -63,7 +64,12 @@ def delete_loan(loan_id: int, db: Session = Depends(get_db)):
 # --- Rate Changes ---
 
 @router.post("/{loan_id}/rates", response_model=RateChangeResponse, status_code=201)
-def add_rate_change(loan_id: int, rc: RateChangeCreate, db: Session = Depends(get_db)):
+def add_rate_change(
+    loan_id: int,
+    rc: RateChangeCreate,
+    db: Session = Depends(get_db),
+    adjust_repayment: Optional[float] = Query(default=None, gt=0),
+):
     loan = db.query(Loan).filter(Loan.id == loan_id).first()
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
@@ -71,6 +77,9 @@ def add_rate_change(loan_id: int, rc: RateChangeCreate, db: Session = Depends(ge
         raise HTTPException(status_code=422, detail="Rate change cannot be before loan start date")
     db_rc = RateChange(loan_id=loan_id, **rc.model_dump())
     db.add(db_rc)
+    if adjust_repayment is not None:
+        loan.fixed_repayment = adjust_repayment
+        loan.updated_at = datetime.now().isoformat()
     db.commit()
     db.refresh(db_rc)
     return db_rc

@@ -300,6 +300,67 @@ def test_export_xlsx(client, created_loan):
     assert "spreadsheetml" in res.headers["content-type"]
 
 
+# --- Rate Change Preview ---
+
+def test_rate_change_preview_with_fixed_repayment(client, created_loan):
+    lid = created_loan["id"]
+    res = client.post(f"/api/loans/{lid}/rates/preview", json={
+        "effective_date": "2026-09-01",
+        "annual_rate": 0.06,
+    })
+    assert res.status_code == 200
+    data = res.json()
+    assert data["has_fixed_repayment"] is True
+    assert data["current_repayment"] == 612.39
+    assert len(data["options"]) == 2
+    # Option A: keep repayment
+    assert "Keep repayment" in data["options"][0]["label"]
+    assert data["options"][0]["fixed_repayment"] == 612.39
+    # Option B: adjust repayment
+    assert "Adjust repayment" in data["options"][1]["label"]
+    assert data["options"][1]["fixed_repayment"] != 612.39
+
+
+def test_rate_change_preview_without_fixed_repayment(client, sample_loan_data):
+    # Create loan without fixed_repayment
+    loan_data = {**sample_loan_data, "fixed_repayment": None}
+    del loan_data["fixed_repayment"]
+    loan = client.post("/api/loans", json=loan_data).json()
+    lid = loan["id"]
+    res = client.post(f"/api/loans/{lid}/rates/preview", json={
+        "effective_date": "2026-09-01",
+        "annual_rate": 0.06,
+    })
+    assert res.status_code == 200
+    data = res.json()
+    assert data["has_fixed_repayment"] is False
+    assert len(data["options"]) == 1
+
+
+def test_rate_change_with_adjust_repayment(client, created_loan):
+    lid = created_loan["id"]
+    res = client.post(f"/api/loans/{lid}/rates?adjust_repayment=650.00", json={
+        "effective_date": "2026-09-01",
+        "annual_rate": 0.06,
+    })
+    assert res.status_code == 201
+    # Verify the loan's fixed_repayment was updated
+    loan = client.get(f"/api/loans/{lid}").json()
+    assert loan["fixed_repayment"] == 650.00
+
+
+def test_rate_change_without_adjust_keeps_existing(client, created_loan):
+    lid = created_loan["id"]
+    res = client.post(f"/api/loans/{lid}/rates", json={
+        "effective_date": "2026-09-01",
+        "annual_rate": 0.06,
+    })
+    assert res.status_code == 201
+    # Verify the loan's fixed_repayment was NOT changed
+    loan = client.get(f"/api/loans/{lid}").json()
+    assert loan["fixed_repayment"] == 612.39
+
+
 # --- Health ---
 
 def test_health(client):

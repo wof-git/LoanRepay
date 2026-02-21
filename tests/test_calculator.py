@@ -2,7 +2,7 @@
 
 import pytest
 from datetime import date
-from src.calculator import pmt, calculate_schedule, find_repayment_for_target_date
+from src.calculator import pmt, calculate_schedule, find_repayment_for_target_date, calculate_period_interest
 
 
 # --- PMT function tests ---
@@ -287,3 +287,70 @@ def test_no_fixed_repayment_uses_calculated_pmt():
     # All additional should be 0
     for row in sched.rows:
         assert row.additional == 0.0
+
+
+# --- Pro-rata interest tests ---
+
+def test_interest_prorate_mid_period_rate_change():
+    """When a rate change falls mid-period, interest should be pro-rated."""
+    balance = 30000.0
+    prev_date = date(2026, 3, 6)
+    payment_date = date(2026, 3, 20)  # 14-day period
+    base_rate = 0.0575
+    # Rate changes on Mar 9 — 3 days at old rate, 11 days at new rate
+    rate_changes = [{"effective_date": "2026-03-09", "annual_rate": 0.06}]
+
+    interest, end_rate = calculate_period_interest(
+        balance, prev_date, payment_date, base_rate, rate_changes, "fortnightly"
+    )
+
+    # Manual calculation:
+    # 3 days at 5.75%: 30000 * 0.0575 / 365 * 3 = 14.178...
+    # 11 days at 6.00%: 30000 * 0.06 / 365 * 11 = 54.247...
+    # Total: ~68.42
+    expected = round(30000 * 0.0575 / 365 * 3 + 30000 * 0.06 / 365 * 11, 2)
+    assert interest == expected
+    assert end_rate == 0.06
+
+
+def test_interest_no_split_matches_original():
+    """When no rate change falls within a period, use simple formula (Excel match)."""
+    balance = 30050.0
+    prev_date = date(2026, 2, 20)
+    payment_date = date(2026, 3, 6)
+    base_rate = 0.0575
+
+    interest, end_rate = calculate_period_interest(
+        balance, prev_date, payment_date, base_rate, None, "fortnightly"
+    )
+
+    # Simple formula: balance * rate / 26
+    expected = round(30050.0 * 0.0575 / 26, 2)
+    assert interest == expected
+    assert end_rate == 0.0575
+
+
+def test_prorate_schedule_differs_from_simple():
+    """A mid-period rate change should produce different interest than full-period."""
+    # Schedule with rate change exactly on a payment boundary
+    sched_boundary = calculate_schedule(
+        principal=30050.00,
+        annual_rate=0.0575,
+        frequency="fortnightly",
+        start_date=date(2026, 2, 20),
+        loan_term=52,
+        fixed_repayment=612.39,
+        rate_changes=[{"effective_date": "2026-07-10", "annual_rate": 0.06}],
+    )
+    # Schedule with rate change mid-period (3 days after a payment date)
+    sched_mid = calculate_schedule(
+        principal=30050.00,
+        annual_rate=0.0575,
+        frequency="fortnightly",
+        start_date=date(2026, 2, 20),
+        loan_term=52,
+        fixed_repayment=612.39,
+        rate_changes=[{"effective_date": "2026-07-13", "annual_rate": 0.06}],
+    )
+    # The total interest should differ because of pro-rating
+    assert sched_boundary.total_interest != sched_mid.total_interest

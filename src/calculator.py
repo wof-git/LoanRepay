@@ -91,6 +91,67 @@ def get_rate_at_date(
     return current_rate
 
 
+def calculate_period_interest(
+    balance: float,
+    prev_date: date,
+    payment_date: date,
+    base_rate: float,
+    rate_changes: list[dict] | None,
+    frequency: str,
+) -> tuple[float, float]:
+    """Calculate interest for a period, pro-rating if a rate change falls mid-period.
+
+    Returns (interest, end_of_period_rate).
+
+    If no rate change boundary falls strictly within (prev_date, payment_date),
+    uses the simple balance * rate / periods_per_year formula (matching Excel).
+
+    If a rate change falls mid-period, splits into sub-intervals and uses
+    daily interest: balance * annual_rate / 365 * days for each sub-interval.
+    """
+    ppy = periods_per_year(frequency)
+    end_rate = get_rate_at_date(payment_date, base_rate, rate_changes)
+
+    if not rate_changes:
+        return round(balance * end_rate / ppy, 2), end_rate
+
+    # Collect rate boundaries that fall strictly within (prev_date, payment_date)
+    boundaries = []
+    for rc in rate_changes:
+        eff = rc["effective_date"]
+        if isinstance(eff, str):
+            eff = date.fromisoformat(eff)
+        if prev_date < eff < payment_date:
+            boundaries.append(eff)
+    boundaries.sort()
+
+    if not boundaries:
+        # No mid-period rate change — use simple formula
+        return round(balance * end_rate / ppy, 2), end_rate
+
+    # Split the period into sub-intervals and sum daily interest
+    total_interest = 0.0
+    interval_start = prev_date
+    for boundary in boundaries:
+        days = (boundary - interval_start).days
+        rate_at_start = get_rate_at_date(interval_start if interval_start == prev_date else interval_start, base_rate, rate_changes)
+        # For the first sub-interval, use the rate effective at prev_date
+        # (actually the day after prev_date, but get_rate_at_date uses >=)
+        # We need the rate in effect during (interval_start, boundary)
+        # That's the rate at interval_start (since rate changes take effect on their date)
+        # But if interval_start IS prev_date, the rate is whatever was in effect then
+        sub_rate = get_rate_at_date(interval_start, base_rate, rate_changes)
+        total_interest += balance * sub_rate / 365 * days
+        interval_start = boundary
+
+    # Final sub-interval: boundary -> payment_date
+    days = (payment_date - interval_start).days
+    sub_rate = get_rate_at_date(interval_start, base_rate, rate_changes)
+    total_interest += balance * sub_rate / 365 * days
+
+    return round(total_interest, 2), end_rate
+
+
 def get_extras_for_period(
     period_start: date,
     period_end: date,
@@ -155,12 +216,13 @@ def calculate_schedule(
         payment_date = add_period(start_date, frequency, i)
         prev_payment_date = add_period(start_date, frequency, i - 1) if i > 1 else start_date
 
-        current_rate = get_rate_at_date(payment_date, annual_rate, rate_changes)
+        interest, current_rate = calculate_period_interest(
+            balance, prev_payment_date, payment_date, annual_rate, rate_changes, frequency
+        )
         rate_per_period = current_rate / ppy
         remaining_term = max(loan_term - (i - 1), 1)
 
         calculated_payment = pmt(rate_per_period, remaining_term, balance)
-        interest = round(balance * rate_per_period, 2)
 
         if fixed_repayment is not None:
             actual_payment = fixed_repayment

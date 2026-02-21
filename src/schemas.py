@@ -159,3 +159,20 @@ class PayoffTargetResponse(BaseModel):
     total_interest: float
     total_paid: float
     num_repayments: int
+
+
+class RateChangeOption(BaseModel):
+    label: str
+    fixed_repayment: float
+    payoff_date: str
+    total_interest: float
+    num_repayments: int
+    interest_delta: float
+    repayment_delta: int
+
+
+class RateChangePreviewResponse(BaseModel):
+    has_fixed_repayment: bool
+    current_payoff_date: str
+    current_repayment: Optional[float]
+    options: list[RateChangeOption]

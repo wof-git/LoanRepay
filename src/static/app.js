@@ -574,29 +574,126 @@ function showAddRateChange() {
                 <input name="new_rate" type="number" step="0.01" required class="w-full border rounded px-3 py-1.5 text-sm" placeholder="6.0"></div>
             <div><label class="block text-sm text-gray-600">Note (optional)</label>
                 <input name="note" class="w-full border rounded px-3 py-1.5 text-sm" placeholder="RBA rate change"></div>
-            <div class="flex gap-2 pt-2">
-                <button type="submit" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Save</button>
+            <div id="rate-preview-area"></div>
+            <div id="rate-form-buttons" class="flex gap-2 pt-2">
+                <button type="button" id="rate-preview-btn" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Preview Impact</button>
                 <button type="button" onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
             </div>
         </form>
     `);
-    document.getElementById('add-rate-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const fd = new FormData(e.target);
+
+    document.getElementById('rate-preview-btn').addEventListener('click', async () => {
+        const form = document.getElementById('add-rate-form');
+        if (!form.reportValidity()) return;
+
+        const fd = new FormData(form);
+        const rateDate = fd.get('rate_date');
+        const newRate = parseFloat(fd.get('new_rate')) / 100;
+        const note = fd.get('note') || null;
+
         try {
-            await apiJson(`/loans/${state.currentLoanId}/rates`, 'POST', {
-                effective_date: fd.get('rate_date'),
-                annual_rate: parseFloat(fd.get('new_rate')) / 100,
-                note: fd.get('note') || null,
-            });
-            closeModal();
-            toast('Rate change added!', 'success');
-            await loadSchedule();
-            switchTab('schedule');
+            const preview = await apiJson(
+                `/loans/${state.currentLoanId}/rates/preview`, 'POST',
+                { effective_date: rateDate, annual_rate: newRate, note }
+            );
+            _showRatePreviewStep(preview, rateDate, newRate, note);
         } catch (e) {
-            toast('Failed: ' + e.message, 'error');
+            toast('Preview failed: ' + e.message, 'error');
         }
     });
+}
+
+function _showRatePreviewStep(preview, rateDate, newRate, note) {
+    const area = document.getElementById('rate-preview-area');
+    const buttons = document.getElementById('rate-form-buttons');
+
+    // Disable inputs (step 1 is done)
+    document.querySelectorAll('#add-rate-form input').forEach(el => el.disabled = true);
+    document.getElementById('rate-preview-btn').classList.add('hidden');
+
+    if (!preview.has_fixed_repayment || preview.options.length === 1) {
+        // No choice needed — single option confirmation
+        const opt = preview.options[0];
+        area.innerHTML = `
+            <div class="bg-gray-50 border rounded p-3 mt-2">
+                <p class="text-sm font-medium mb-1">${opt.label}</p>
+                <p class="text-xs text-gray-600">Payoff: ${fmtDate(opt.payoff_date)} | Interest: ${fmtMoney(opt.total_interest)} | Payments: ${opt.num_repayments}</p>
+                ${opt.interest_delta !== 0 ? `<p class="text-xs mt-1 ${opt.interest_delta > 0 ? 'text-red-600' : 'text-green-600'}">${opt.interest_delta > 0 ? '+' : ''}${fmtMoney(opt.interest_delta)} interest</p>` : ''}
+            </div>
+        `;
+        buttons.innerHTML = `
+            <button type="button" id="rate-confirm-btn" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Confirm & Save</button>
+            <button type="button" onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
+        `;
+        document.getElementById('rate-confirm-btn').addEventListener('click', () =>
+            _saveRateChange(rateDate, newRate, note, null)
+        );
+        return;
+    }
+
+    // Two options — show radio cards
+    let cardsHtml = '<div class="space-y-2 mt-2">';
+    preview.options.forEach((opt, i) => {
+        const deltaClass = opt.interest_delta > 0 ? 'text-red-600' : opt.interest_delta < 0 ? 'text-green-600' : 'text-gray-600';
+        const deltaText = opt.interest_delta !== 0
+            ? `${opt.interest_delta > 0 ? '+' : ''}${fmtMoney(opt.interest_delta)} interest`
+            : 'No change in interest';
+        const repDeltaText = opt.repayment_delta !== 0
+            ? ` | ${opt.repayment_delta > 0 ? '+' : ''}${opt.repayment_delta} payments`
+            : '';
+        cardsHtml += `
+            <label class="block border rounded p-3 cursor-pointer hover:bg-blue-50 ${i === 0 ? 'border-blue-500 bg-blue-50' : ''}">
+                <input type="radio" name="rate_option" value="${i}" ${i === 0 ? 'checked' : ''} class="mr-2">
+                <span class="text-sm font-medium">${opt.label}</span>
+                <p class="text-xs text-gray-600 ml-5">Payoff: ${fmtDate(opt.payoff_date)} | Interest: ${fmtMoney(opt.total_interest)} | Payments: ${opt.num_repayments}</p>
+                <p class="text-xs ml-5 ${deltaClass}">${deltaText}${repDeltaText}</p>
+            </label>
+        `;
+    });
+    cardsHtml += '</div>';
+    area.innerHTML = cardsHtml;
+
+    // Highlight selected card
+    area.querySelectorAll('input[name="rate_option"]').forEach(radio => {
+        radio.addEventListener('change', () => {
+            area.querySelectorAll('label').forEach(l => {
+                l.classList.remove('border-blue-500', 'bg-blue-50');
+            });
+            radio.closest('label').classList.add('border-blue-500', 'bg-blue-50');
+        });
+    });
+
+    buttons.innerHTML = `
+        <button type="button" id="rate-confirm-btn" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Confirm & Save</button>
+        <button type="button" onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
+    `;
+
+    document.getElementById('rate-confirm-btn').addEventListener('click', () => {
+        const selected = parseInt(document.querySelector('input[name="rate_option"]:checked').value);
+        const chosenOpt = preview.options[selected];
+        // If user chose option B (adjust repayment) and it differs from current
+        const adjustRepayment = (selected > 0 && chosenOpt.fixed_repayment !== preview.current_repayment)
+            ? chosenOpt.fixed_repayment : null;
+        _saveRateChange(rateDate, newRate, note, adjustRepayment);
+    });
+}
+
+async function _saveRateChange(rateDate, newRate, note, adjustRepayment) {
+    try {
+        const qs = adjustRepayment != null ? `?adjust_repayment=${adjustRepayment}` : '';
+        await apiJson(`/loans/${state.currentLoanId}/rates${qs}`, 'POST', {
+            effective_date: rateDate,
+            annual_rate: newRate,
+            note: note,
+        });
+        closeModal();
+        toast('Rate change added!', 'success');
+        await loadLoans();
+        await loadSchedule();
+        switchTab('schedule');
+    } catch (e) {
+        toast('Failed: ' + e.message, 'error');
+    }
 }
 
 async function deleteRateChange(id) {
