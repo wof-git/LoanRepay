@@ -5,7 +5,8 @@ from playwright.sync_api import expect
 
 def _create_loan(page):
     """Helper to create a test loan."""
-    page.click("text=Create your first loan")
+    page.click("button:has-text('Create your first loan')")
+    page.wait_for_timeout(300)
     page.fill("input[name=name]", "What-If Test")
     page.fill("input[name=principal]", "30050")
     page.fill("input[name=annual_rate]", "5.75")

@@ -7,10 +7,11 @@ from playwright.sync_api import expect
 def test_create_loan_and_view_schedule(page):
     """Full lifecycle: create loan -> see schedule -> verify data."""
     # Verify empty state
-    expect(page.locator("text=Create your first loan")).to_be_visible()
+    expect(page.locator("button:has-text('Create your first loan')")).to_be_visible()
 
     # Create loan
-    page.click("text=Create your first loan")
+    page.click("button:has-text('Create your first loan')")
+    page.wait_for_timeout(300)
     page.fill("input[name=name]", "DCarlile Home Loan")
     page.fill("input[name=principal]", "30050")
     page.fill("input[name=annual_rate]", "5.75")
@@ -36,7 +37,8 @@ def test_create_loan_and_view_schedule(page):
 def test_mark_repayment_paid(page):
     """Tick checkbox, verify persists after reload."""
     # Create loan first
-    page.click("text=Create your first loan")
+    page.click("button:has-text('Create your first loan')")
+    page.wait_for_timeout(300)
     page.fill("input[name=name]", "Test Loan")
     page.fill("input[name=principal]", "10000")
     page.fill("input[name=annual_rate]", "5")
@@ -66,7 +68,8 @@ def test_mark_repayment_paid(page):
 def test_add_rate_change(page):
     """Add rate change, verify schedule recalculates."""
     # Create loan
-    page.click("text=Create your first loan")
+    page.click("button:has-text('Create your first loan')")
+    page.wait_for_timeout(300)
     page.fill("input[name=name]", "Rate Test")
     page.fill("input[name=principal]", "30050")
     page.fill("input[name=annual_rate]", "5.75")
@@ -84,11 +87,14 @@ def test_add_rate_change(page):
     # Note initial total interest
     initial = page.locator(".total-interest").text_content()
 
-    # Add rate change
-    page.click("text=+ Add Rate Change")
+    # Add rate change (click the "+ Add" button in the Rate Changes section)
+    page.locator(".bg-violet-50 button:has-text('+ Add')").click()
+    page.wait_for_timeout(300)
     page.fill("input[name=rate_date]", "2026-09-01")
     page.fill("input[name=new_rate]", "6.0")
-    page.click("button:has-text('Save')")
+    page.click("button:has-text('Preview Impact')")
+    page.wait_for_timeout(500)
+    page.click("button:has-text('Confirm & Save')")
     page.wait_for_timeout(500)
 
     # Verify interest changed
@@ -99,7 +105,8 @@ def test_add_rate_change(page):
 def test_delete_loan(page):
     """Delete loan, verify return to empty state."""
     # Create loan
-    page.click("text=Create your first loan")
+    page.click("button:has-text('Create your first loan')")
+    page.wait_for_timeout(300)
     page.fill("input[name=name]", "To Delete")
     page.fill("input[name=principal]", "5000")
     page.fill("input[name=annual_rate]", "5")
@@ -115,4 +122,4 @@ def test_delete_loan(page):
     page.wait_for_timeout(500)
 
     # Verify empty state
-    expect(page.locator("text=Create your first loan")).to_be_visible()
+    expect(page.locator("button:has-text('Create your first loan')")).to_be_visible()
