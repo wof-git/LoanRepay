@@ -472,11 +472,10 @@ function toggleWhatIf() {
     }
 }
 
-function onWhatIfChange() {
-    const src = document.activeElement?.id;
-    if (src === 'whatif-slider') {
+function onWhatIfChange(source) {
+    if (source === 'slider') {
         document.getElementById('whatif-repayment').value = document.getElementById('whatif-slider').value;
-    } else if (src === 'whatif-repayment') {
+    } else if (source === 'repayment') {
         document.getElementById('whatif-slider').value = document.getElementById('whatif-repayment').value;
     }
     clearTimeout(whatIfDebounce);

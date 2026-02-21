@@ -59,17 +59,25 @@ tr.overdue td { background-color: #fee2e2 !important; }
 /* Slider styling */
 input[type="range"] {
     -webkit-appearance: none;
+    appearance: none;
+    height: 6px;
+    border-radius: 3px;
+    background: #d1d5db;
+}
+input[type="range"]::-webkit-slider-runnable-track {
     height: 6px;
     border-radius: 3px;
     background: #d1d5db;
 }
 input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
+    appearance: none;
     width: 18px;
     height: 18px;
     border-radius: 50%;
     background: #3b82f6;
     cursor: pointer;
+    margin-top: -6px;
 }
 
 /* Checkbox styling */
