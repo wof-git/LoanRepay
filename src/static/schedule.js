@@ -149,29 +149,3 @@ async function renderExtras(state, { fmtDate, fmtMoney, api }) {
     }
 }
 
-// Toggle paid — called from inline onclick
-window.app = window.app || {};
-window.app._togglePaid = async function(num, checked) {
-    const loanId = window.app.state.currentLoanId;
-    if (!loanId) return;
-    try {
-        if (checked) {
-            await fetch(`/api/loans/${loanId}/paid/${num}`, { method: 'POST' });
-        } else {
-            await fetch(`/api/loans/${loanId}/paid/${num}`, { method: 'DELETE' });
-        }
-        await window.app.loadSchedule();
-        renderSchedule(
-            window.app.state,
-            {
-                fmtMoney: window.app.fmtMoney, fmtDate: window.app.fmtDate,
-                fmtPct: window.app.fmtPct, api: window.app.api,
-                apiJson: window.app.apiJson, toast: window.app.toast,
-                loadSchedule: window.app.loadSchedule,
-                showModal: () => {}, closeModal: () => {},
-            }
-        );
-    } catch (e) {
-        window.app.toast('Failed to update: ' + e.message, 'error');
-    }
-};

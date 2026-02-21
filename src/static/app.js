@@ -674,6 +674,23 @@ async function compareSelected() {
     }
 }
 
+// --- Toggle Paid ---
+
+async function _togglePaid(num, checked) {
+    if (!state.currentLoanId) return;
+    try {
+        if (checked) {
+            await fetch(`${API}/loans/${state.currentLoanId}/paid/${num}`, { method: 'POST' });
+        } else {
+            await fetch(`${API}/loans/${state.currentLoanId}/paid/${num}`, { method: 'DELETE' });
+        }
+        await loadSchedule();
+        switchTab('schedule');
+    } catch (e) {
+        toast('Failed to update: ' + e.message, 'error');
+    }
+}
+
 // --- Export ---
 
 function exportSchedule(format) {
@@ -689,7 +706,7 @@ window.app = {
     toggleWhatIf, onWhatIfChange, applyWhatIf,
     saveWhatIfScenario, resetWhatIf, calcPayoffTarget,
     showAddRateChange, deleteRateChange, showAddExtra, deleteExtra,
-    compareSelected, exportSchedule,
+    compareSelected, exportSchedule, _togglePaid,
     // State access for child modules
     get state() { return state; },
     fmtMoney, fmtDate, fmtPct, api, apiJson, toast, loadSchedule,
