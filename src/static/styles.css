@@ -11,9 +11,9 @@
 }
 
 /* Row colors */
-tr.paid { background-color: #dcfce7; }
-tr.next-due { background-color: #fef9c3; font-weight: 600; }
-tr.overdue { background-color: #fee2e2; }
+tr.paid td { background-color: #dcfce7 !important; }
+tr.next-due td { background-color: #fef9c3 !important; font-weight: 600; }
+tr.overdue td { background-color: #fee2e2 !important; }
 
 /* Summary bar sticky */
 .sticky-summary {
