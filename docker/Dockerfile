@@ -9,8 +9,8 @@ COPY src/ src/
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-RUN addgroup --system --gid 1001 appgroup && \
-    adduser --system --uid 1001 --ingroup appgroup appuser && \
+RUN addgroup --gid 100 appgroup && \
+    adduser --disabled-password --uid 1026 --ingroup appgroup --gecos "" appuser && \
     mkdir -p /app/data && chown -R appuser:appgroup /app/data
 
 EXPOSE 8000
