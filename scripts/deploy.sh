@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-NAS_HOST="wofnasadmin@wofnas.tail6c8ab5.ts.net"
+NAS_HOST="WOFNASadmin@wofnas.tail6c8ab5.ts.net"
 NAS_PATH="/volume3/Wof/repo/LoanRepay"
 
 echo "=== Syncing files to NAS ==="
