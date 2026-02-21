@@ -53,6 +53,13 @@ tr.overdue td { background-color: #fee2e2 !important; }
     .summary-cards { flex-direction: column; }
 }
 
+/* Small-screen table tightening */
+@media (max-width: 640px) {
+    .schedule-table-wrapper table { font-size: 0.75rem; }
+    .schedule-table-wrapper th,
+    .schedule-table-wrapper td { padding: 0.15rem 0.35rem; }
+}
+
 /* Slider styling */
 input[type="range"] {
     -webkit-appearance: none;

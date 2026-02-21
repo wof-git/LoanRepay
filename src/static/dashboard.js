@@ -1,5 +1,6 @@
 let balanceChart = null;
 let breakdownChart = null;
+let cumulativeInterestChart = null;
 
 export function renderDashboard(state, { fmtMoney, fmtDate, fmtPct, api }) {
     const s = state.schedule;
@@ -93,6 +94,41 @@ export function renderDashboard(state, { fmtMoney, fmtDate, fmtPct, api }) {
             scales: {
                 x: { stacked: true, ticks: { maxTicksLimit: 15 } },
                 y: { stacked: true, ticks: { callback: v => '$' + v } },
+            },
+        },
+    });
+
+    // Cumulative interest chart
+    let cumulative = 0;
+    const cumulativeData = s.rows.map(r => {
+        cumulative += r.interest;
+        return Math.round(cumulative * 100) / 100;
+    });
+
+    const cumCtx = document.getElementById('chart-cumulative-interest');
+    if (cumulativeInterestChart) cumulativeInterestChart.destroy();
+    cumulativeInterestChart = new Chart(cumCtx, {
+        type: 'line',
+        data: {
+            labels,
+            datasets: [{
+                label: 'Cumulative Interest',
+                data: cumulativeData,
+                borderColor: '#f97316',
+                backgroundColor: 'rgba(249,115,22,0.1)',
+                fill: true,
+                tension: 0.1,
+                pointRadius: 0,
+            }],
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: {
+                    ticks: { maxTicksLimit: 10, callback: (_, i) => fmtDate(labels[i]) },
+                },
+                y: { ticks: { callback: v => '$' + v.toLocaleString() } },
             },
         },
     });

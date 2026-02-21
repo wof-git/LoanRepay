@@ -470,6 +470,31 @@ def test_delete_loan_cascades_repayment_changes(client, created_loan):
     assert client.get(f"/api/loans/{lid}").status_code == 404
 
 
+def test_repayment_change_preview(client, created_loan):
+    """Preview shows impact of a proposed repayment change."""
+    lid = created_loan["id"]
+    # Get base schedule for comparison
+    base = client.get(f"/api/loans/{lid}/schedule").json()
+
+    res = client.post(f"/api/loans/{lid}/repayment-changes/preview", json={
+        "effective_date": "2026-06-01",
+        "amount": 700.0,
+    })
+    assert res.status_code == 200
+    data = res.json()
+
+    # Current values should match the base schedule
+    assert data["current_payoff_date"] == base["summary"]["payoff_date"]
+    assert data["current_total_interest"] == base["summary"]["total_interest"]
+    assert data["current_num_repayments"] == base["summary"]["total_repayments"]
+
+    # Higher repayment -> less interest, fewer payments
+    assert data["new_total_interest"] < data["current_total_interest"]
+    assert data["new_num_repayments"] < data["current_num_repayments"]
+    assert data["interest_delta"] < 0
+    assert data["repayment_delta"] < 0
+
+
 # --- Health ---
 
 def test_health(client):

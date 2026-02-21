@@ -8,6 +8,7 @@ from src.models import Loan, RateChange, ExtraRepayment, PaidRepayment, Repaymen
 from src.schemas import (
     WhatIfRequest, ScheduleResponse, ScheduleRow, ScheduleSummary,
     PayoffTargetResponse, RateChangeCreate, RateChangeOption, RateChangePreviewResponse,
+    RepaymentChangeCreate, RepaymentChangePreviewResponse,
 )
 from src.calculator import calculate_schedule, find_repayment_for_target_date
 
@@ -260,6 +261,59 @@ def preview_rate_change(loan_id: int, rc: RateChangeCreate, db: Session = Depend
         current_payoff_date=current_payoff,
         current_repayment=loan.fixed_repayment,
         options=options,
+    )
+
+
+@router.post("/repayment-changes/preview", response_model=RepaymentChangePreviewResponse)
+def preview_repayment_change(loan_id: int, rc: RepaymentChangeCreate, db: Session = Depends(get_db)):
+    loan = db.query(Loan).filter(Loan.id == loan_id).first()
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+
+    # Load existing data from DB
+    db_rates = db.query(RateChange).filter(RateChange.loan_id == loan.id).all()
+    existing_rates = [{"effective_date": r.effective_date, "annual_rate": r.annual_rate, "adjusted_repayment": r.adjusted_repayment} for r in db_rates]
+    db_extras = db.query(ExtraRepayment).filter(ExtraRepayment.loan_id == loan.id).all()
+    extras = [{"payment_date": er.payment_date, "amount": er.amount} for er in db_extras]
+    db_repayment_changes = db.query(RepaymentChange).filter(RepaymentChange.loan_id == loan.id).all()
+    existing_rpc = [{"effective_date": r.effective_date, "amount": r.amount} for r in db_repayment_changes]
+
+    # Current schedule (before this repayment change)
+    current = calculate_schedule(
+        principal=loan.principal,
+        annual_rate=loan.annual_rate,
+        frequency=loan.frequency,
+        start_date=loan.start_date,
+        loan_term=loan.loan_term,
+        fixed_repayment=loan.fixed_repayment,
+        rate_changes=existing_rates or None,
+        extra_repayments=extras or None,
+        repayment_changes=existing_rpc or None,
+    )
+
+    # New schedule with proposed repayment change appended
+    new_rpc = existing_rpc + [{"effective_date": rc.effective_date, "amount": rc.amount}]
+    new_sched = calculate_schedule(
+        principal=loan.principal,
+        annual_rate=loan.annual_rate,
+        frequency=loan.frequency,
+        start_date=loan.start_date,
+        loan_term=loan.loan_term,
+        fixed_repayment=loan.fixed_repayment,
+        rate_changes=existing_rates or None,
+        extra_repayments=extras or None,
+        repayment_changes=new_rpc or None,
+    )
+
+    return RepaymentChangePreviewResponse(
+        current_payoff_date=current.payoff_date,
+        current_total_interest=current.total_interest,
+        current_num_repayments=current.total_repayments,
+        new_payoff_date=new_sched.payoff_date,
+        new_total_interest=new_sched.total_interest,
+        new_num_repayments=new_sched.total_repayments,
+        interest_delta=round(new_sched.total_interest - current.total_interest, 2),
+        repayment_delta=new_sched.total_repayments - current.total_repayments,
     )
 
 

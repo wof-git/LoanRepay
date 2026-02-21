@@ -59,7 +59,7 @@ export function renderSchedule(state, helpers, isWhatIf = false) {
                                 <th class="px-3 py-1 w-8"></th>
                                 <th class="px-2 py-1">#</th>
                                 <th class="px-2 py-1">Date</th>
-                                <th class="px-2 py-1 text-right">Balance</th>
+                                <th class="px-2 py-1 text-right hidden sm:table-cell">Balance</th>
                                 <th class="px-2 py-1 text-right">Repayment</th>
                                 <th class="px-2 py-1 text-right">Interest</th>
                                 <th class="px-2 py-1 text-right">Principal</th>${hasExtras ? '<th class="px-2 py-1 text-right">Extra</th>' : ''}
@@ -85,7 +85,7 @@ export function renderSchedule(state, helpers, isWhatIf = false) {
                 </td>
                 <td class="px-2 py-1 text-gray-500">${row.number}</td>
                 <td class="px-2 py-1">${fmtDate(row.date)}</td>
-                <td class="px-2 py-1 text-right">${fmtMoney(row.opening_balance)}</td>
+                <td class="px-2 py-1 text-right hidden sm:table-cell">${fmtMoney(row.opening_balance)}</td>
                 <td class="px-2 py-1 text-right font-medium">${fmtMoney(row.principal + row.interest)}</td>
                 <td class="px-2 py-1 text-right text-orange-600">${fmtMoney(row.interest)}</td>
                 <td class="px-2 py-1 text-right text-green-700">${fmtMoney(row.principal)}</td>${hasExtras ? `<td class="px-2 py-1 text-right text-blue-600">${row.extra > 0 ? fmtMoney(row.extra) : '-'}</td>` : ''}

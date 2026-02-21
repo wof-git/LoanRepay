@@ -12,12 +12,12 @@
     <nav class="bg-white shadow-sm border-b">
         <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
             <h1 class="text-xl font-bold text-gray-800">Carlile Loan Repayments</h1>
-            <div class="flex items-center gap-3">
-                <select id="loan-selector" class="border rounded-lg px-3 py-1.5 text-sm bg-white">
+            <div class="flex flex-wrap items-center gap-3">
+                <select id="loan-selector" class="border rounded-lg px-3 py-1.5 text-xs sm:text-sm bg-white">
                     <option value="">Select a loan...</option>
                 </select>
-                <button onclick="app.showCreateLoan()" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-blue-700">+ New</button>
-                <button onclick="app.showImport()" class="bg-gray-600 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-gray-700">Import</button>
+                <button onclick="app.showCreateLoan()" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm hover:bg-blue-700">+ New</button>
+                <button onclick="app.showImport()" class="bg-gray-600 text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm hover:bg-gray-700">Import</button>
             </div>
         </div>
     </nav>
@@ -33,7 +33,7 @@
 
     <!-- Sticky Summary Bar -->
     <div id="summary-bar" class="sticky-summary bg-white/95 border-b shadow-sm hidden">
-        <div class="max-w-7xl mx-auto px-4 py-4 flex flex-wrap gap-6 items-center summary-cards text-lg">
+        <div class="max-w-7xl mx-auto px-4 py-3 sm:py-4 flex flex-wrap gap-3 sm:gap-6 items-center summary-cards text-sm sm:text-lg">
             <div><span class="text-gray-500">Balance:</span> <span id="sum-balance" class="font-bold summary-balance">-</span></div>
             <div><span class="text-gray-500">Next:</span> <span id="sum-next" class="font-bold">-</span></div>
             <div><span class="text-gray-500">Paid:</span> <span id="sum-paid" class="font-bold">-</span></div>
@@ -75,7 +75,7 @@
                     <p id="dash-payoff" class="text-2xl font-bold text-green-600">-</p>
                 </div>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                 <div class="bg-white rounded-xl shadow p-4">
                     <h3 class="text-sm text-gray-500 mb-2">Balance Over Time</h3>
                     <canvas id="chart-balance"></canvas>
@@ -83,6 +83,10 @@
                 <div class="bg-white rounded-xl shadow p-4">
                     <h3 class="text-sm text-gray-500 mb-2">Principal vs Interest</h3>
                     <canvas id="chart-breakdown"></canvas>
+                </div>
+                <div class="bg-white rounded-xl shadow p-4">
+                    <h3 class="text-sm text-gray-500 mb-2">Cumulative Interest</h3>
+                    <canvas id="chart-cumulative-interest"></canvas>
                 </div>
             </div>
             <div class="bg-white rounded-xl shadow p-4">

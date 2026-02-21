@@ -197,3 +197,14 @@ class RateChangePreviewResponse(BaseModel):
     current_payoff_date: str
     current_repayment: Optional[float]
     options: list[RateChangeOption]
+
+
+class RepaymentChangePreviewResponse(BaseModel):
+    current_payoff_date: str
+    current_total_interest: float
+    current_num_repayments: int
+    new_payoff_date: str
+    new_total_interest: float
+    new_num_repayments: int
+    interest_delta: float
+    repayment_delta: int

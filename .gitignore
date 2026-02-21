@@ -14,3 +14,4 @@ data/*.db-shm
 *.xlsx
 node_modules/
 .DS_Store
+backups/

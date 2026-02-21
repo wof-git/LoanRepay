@@ -755,29 +755,87 @@ function showAddRepaymentChange() {
                 <input name="amount" type="number" step="0.01" required class="w-full border rounded px-3 py-1.5 text-sm" placeholder="700.00"></div>
             <div><label class="block text-sm text-gray-600">Note (optional)</label>
                 <input name="note" class="w-full border rounded px-3 py-1.5 text-sm" placeholder="Increased repayment"></div>
-            <div class="flex gap-2 pt-2">
-                <button type="submit" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Save</button>
+            <div id="repayment-preview-area"></div>
+            <div id="repayment-form-buttons" class="flex gap-2 pt-2">
+                <button type="button" id="repayment-preview-btn" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Preview Impact</button>
                 <button type="button" onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
             </div>
         </form>
     `);
-    document.getElementById('add-repayment-change-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const fd = new FormData(e.target);
+
+    document.getElementById('repayment-preview-btn').addEventListener('click', async () => {
+        const form = document.getElementById('add-repayment-change-form');
+        if (!form.reportValidity()) return;
+
+        const fd = new FormData(form);
+        const effectiveDate = fd.get('effective_date');
+        const amount = parseFloat(fd.get('amount'));
+        const note = fd.get('note') || null;
+
         try {
-            await apiJson(`/loans/${state.currentLoanId}/repayment-changes`, 'POST', {
-                effective_date: fd.get('effective_date'),
-                amount: parseFloat(fd.get('amount')),
-                note: fd.get('note') || null,
-            });
-            closeModal();
-            toast('Repayment change added!', 'success');
-            await loadSchedule();
-            switchTab('schedule');
+            const preview = await apiJson(
+                `/loans/${state.currentLoanId}/repayment-changes/preview`, 'POST',
+                { effective_date: effectiveDate, amount, note }
+            );
+            _showRepaymentPreviewStep(preview, effectiveDate, amount, note);
         } catch (e) {
-            toast('Failed: ' + e.message, 'error');
+            toast('Preview failed: ' + e.message, 'error');
         }
     });
+}
+
+function _showRepaymentPreviewStep(preview, effectiveDate, amount, note) {
+    const area = document.getElementById('repayment-preview-area');
+    const buttons = document.getElementById('repayment-form-buttons');
+
+    // Disable inputs (step 1 is done)
+    document.querySelectorAll('#add-repayment-change-form input').forEach(el => el.disabled = true);
+    document.getElementById('repayment-preview-btn').classList.add('hidden');
+
+    const interestDelta = preview.interest_delta;
+    const repDelta = preview.repayment_delta;
+
+    const parts = [];
+    if (interestDelta < 0) parts.push(`<span class="text-green-600 font-medium">Save ${fmtMoney(Math.abs(interestDelta))} interest</span>`);
+    if (interestDelta > 0) parts.push(`<span class="text-red-600 font-medium">+${fmtMoney(interestDelta)} more interest</span>`);
+    if (repDelta < 0) parts.push(`<span class="text-green-600 font-medium">${Math.abs(repDelta)} fewer payments</span>`);
+    if (repDelta > 0) parts.push(`<span class="text-red-600 font-medium">${repDelta} more payments</span>`);
+    if (parts.length === 0) parts.push('<span class="text-gray-500">No significant change</span>');
+
+    area.innerHTML = `
+        <div class="bg-gray-50 border rounded p-3 mt-2 space-y-1">
+            <p class="text-sm font-medium">Impact Preview</p>
+            <p class="text-xs text-gray-600">Payoff: ${fmtDate(preview.current_payoff_date)} → ${fmtDate(preview.new_payoff_date)}</p>
+            <p class="text-xs text-gray-600">Interest: ${fmtMoney(preview.current_total_interest)} → ${fmtMoney(preview.new_total_interest)}</p>
+            <p class="text-xs text-gray-600">Payments: ${preview.current_num_repayments} → ${preview.new_num_repayments}</p>
+            <p class="text-sm mt-1">${parts.join(' | ')}</p>
+        </div>
+    `;
+
+    buttons.innerHTML = `
+        <button type="button" id="repayment-confirm-btn" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Confirm & Save</button>
+        <button type="button" onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
+    `;
+
+    document.getElementById('repayment-confirm-btn').addEventListener('click', () =>
+        _saveRepaymentChange(effectiveDate, amount, note)
+    );
+}
+
+async function _saveRepaymentChange(effectiveDate, amount, note) {
+    try {
+        await apiJson(`/loans/${state.currentLoanId}/repayment-changes`, 'POST', {
+            effective_date: effectiveDate,
+            amount,
+            note,
+        });
+        closeModal();
+        toast('Repayment change added!', 'success');
+        await loadSchedule();
+        switchTab('schedule');
+    } catch (e) {
+        toast('Failed: ' + e.message, 'error');
+    }
 }
 
 async function deleteRepaymentChange(id) {
