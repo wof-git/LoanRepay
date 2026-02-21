@@ -360,6 +360,43 @@ function showImport() {
     });
 }
 
+// --- Rename Loan ---
+
+function startRenameLoan() {
+    const loan = state.loans.find(l => l.id === state.currentLoanId);
+    if (!loan) return;
+    document.getElementById('loan-name-display').classList.add('hidden');
+    document.querySelector('[onclick="app.startRenameLoan()"]').classList.add('hidden');
+    const form = document.getElementById('loan-rename-form');
+    const input = document.getElementById('loan-rename-input');
+    form.classList.remove('hidden');
+    input.value = loan.name;
+    input.focus();
+    input.select();
+}
+
+function cancelRenameLoan() {
+    document.getElementById('loan-name-display').classList.remove('hidden');
+    document.querySelector('[onclick="app.startRenameLoan()"]').classList.remove('hidden');
+    document.getElementById('loan-rename-form').classList.add('hidden');
+}
+
+document.getElementById('loan-rename-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const newName = document.getElementById('loan-rename-input').value.trim();
+    if (!newName || !state.currentLoanId) return;
+    try {
+        await apiJson(`/loans/${state.currentLoanId}`, 'PUT', { name: newName });
+        toast('Loan renamed!', 'success');
+        cancelRenameLoan();
+        await loadLoans();
+        await loadSchedule();
+        switchTab(state.currentTab);
+    } catch (e) {
+        toast('Failed: ' + e.message, 'error');
+    }
+});
+
 // --- What-If ---
 
 let whatIfDebounce = null;
@@ -648,7 +685,8 @@ function exportSchedule(format) {
 
 window.app = {
     switchTab, showCreateLoan, showEditLoan, confirmDeleteLoan, deleteLoan,
-    showImport, closeModal, toggleWhatIf, onWhatIfChange, applyWhatIf,
+    showImport, closeModal, startRenameLoan, cancelRenameLoan,
+    toggleWhatIf, onWhatIfChange, applyWhatIf,
     saveWhatIfScenario, resetWhatIf, calcPayoffTarget,
     showAddRateChange, deleteRateChange, showAddExtra, deleteExtra,
     compareSelected, exportSchedule,

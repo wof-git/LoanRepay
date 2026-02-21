@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>LoanRepay</title>
+    <title>Carlile Loan Repayments</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <link rel="stylesheet" href="/styles.css">
@@ -11,7 +11,7 @@
 <body class="bg-gray-50 min-h-screen">
     <nav class="bg-white shadow-sm border-b">
         <div class="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
-            <h1 class="text-xl font-bold text-gray-800">LoanRepay</h1>
+            <h1 class="text-xl font-bold text-gray-800">Carlile Loan Repayments</h1>
             <div class="flex items-center gap-3">
                 <select id="loan-selector" class="border rounded-lg px-3 py-1.5 text-sm bg-white">
                     <option value="">Select a loan...</option>
@@ -86,7 +86,17 @@
                 </div>
             </div>
             <div class="bg-white rounded-xl shadow p-4">
-                <h3 class="text-sm text-gray-500 mb-2">Loan Details</h3>
+                <div class="flex items-center gap-2 mb-2">
+                    <h3 id="loan-name-display" class="text-lg font-semibold text-gray-800 loan-name"></h3>
+                    <button onclick="app.startRenameLoan()" class="text-gray-400 hover:text-blue-600" title="Rename loan">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                    </button>
+                    <form id="loan-rename-form" class="hidden flex items-center gap-2">
+                        <input id="loan-rename-input" class="border rounded px-2 py-1 text-sm font-semibold" type="text">
+                        <button type="submit" class="text-green-600 hover:text-green-800 text-xs font-medium">Save</button>
+                        <button type="button" onclick="app.cancelRenameLoan()" class="text-gray-400 hover:text-gray-600 text-xs">Cancel</button>
+                    </form>
+                </div>
                 <div id="loan-details" class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm"></div>
                 <div class="mt-4 flex gap-2">
                     <button onclick="app.showEditLoan()" class="text-sm text-blue-600 hover:underline">Edit Loan</button>

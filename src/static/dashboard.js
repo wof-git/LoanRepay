@@ -13,6 +13,11 @@ export function renderDashboard(state, { fmtMoney, fmtDate, fmtPct, api }) {
     document.getElementById('dash-interest').textContent = fmtMoney(summary.total_interest);
     document.getElementById('dash-payoff').textContent = fmtDate(summary.payoff_date);
 
+    // Loan name
+    if (loan) {
+        document.getElementById('loan-name-display').textContent = loan.name;
+    }
+
     // Loan details
     if (loan) {
         document.getElementById('loan-details').innerHTML = `
