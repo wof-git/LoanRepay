@@ -2,7 +2,7 @@ import json
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from src.database import get_db
-from src.models import Loan, Scenario
+from src.models import Loan, Scenario, RateChange, ExtraRepayment, RepaymentChange
 from src.schemas import ScenarioCreate, ScenarioResponse, ScenarioDetailResponse
 from src.routers.schedule import _build_schedule
 
@@ -25,6 +25,10 @@ def save_scenario(loan_id: int, body: ScenarioCreate, db: Session = Depends(get_
 
     schedule = _build_schedule(loan, db)
 
+    db_rates = db.query(RateChange).filter(RateChange.loan_id == loan.id).all()
+    db_extras = db.query(ExtraRepayment).filter(ExtraRepayment.loan_id == loan.id).all()
+    db_repayment_changes = db.query(RepaymentChange).filter(RepaymentChange.loan_id == loan.id).all()
+
     config = {
         "principal": loan.principal,
         "annual_rate": loan.annual_rate,
@@ -32,6 +36,18 @@ def save_scenario(loan_id: int, body: ScenarioCreate, db: Session = Depends(get_
         "start_date": loan.start_date,
         "loan_term": loan.loan_term,
         "fixed_repayment": loan.fixed_repayment,
+        "rate_changes": [
+            {"effective_date": rc.effective_date, "annual_rate": rc.annual_rate, "adjusted_repayment": rc.adjusted_repayment, "note": rc.note}
+            for rc in db_rates
+        ],
+        "extra_repayments": [
+            {"payment_date": er.payment_date, "amount": er.amount, "note": er.note}
+            for er in db_extras
+        ],
+        "repayment_changes": [
+            {"effective_date": rc.effective_date, "amount": rc.amount, "note": rc.note}
+            for rc in db_repayment_changes
+        ],
     }
 
     scenario = Scenario(
