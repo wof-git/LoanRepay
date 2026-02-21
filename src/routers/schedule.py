@@ -1,5 +1,3 @@
-import json
-from datetime import date
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -67,7 +65,6 @@ def _build_schedule(loan: Loan, db: Session, whatif: WhatIfRequest | None = None
     )
 
     # Build response
-    today = date.today()
     payments_made = len(paid_set)
     next_payment = None
     remaining_balance = 0.0

@@ -2,7 +2,7 @@
 
 /* Print stylesheet */
 @media print {
-    .no-print, nav, .sticky-summary, .whatif-panel, button, input[type="checkbox"] {
+    .no-print, nav, .sticky-summary, #whatif-panel, button, input[type="checkbox"] {
         display: none !important;
     }
     table { font-size: 10pt; }

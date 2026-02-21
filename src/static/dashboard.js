@@ -2,7 +2,7 @@ let balanceChart = null;
 let breakdownChart = null;
 let cumulativeInterestChart = null;
 
-export function renderDashboard(state, { fmtMoney, fmtDate, fmtPct, api }) {
+export function renderDashboard(state, { fmtMoney, fmtDate, fmtPct, escapeHtml }) {
     const s = state.schedule;
     if (!s) return;
 
@@ -24,7 +24,7 @@ export function renderDashboard(state, { fmtMoney, fmtDate, fmtPct, api }) {
         document.getElementById('loan-details').innerHTML = `
             <div><span class="text-gray-500">Principal:</span> <span class="font-medium">${fmtMoney(loan.principal)}</span></div>
             <div><span class="text-gray-500">Rate:</span> <span class="font-medium">${fmtPct(loan.annual_rate)}</span></div>
-            <div><span class="text-gray-500">Frequency:</span> <span class="font-medium capitalize">${loan.frequency}</span></div>
+            <div><span class="text-gray-500">Frequency:</span> <span class="font-medium capitalize">${escapeHtml(loan.frequency)}</span></div>
             <div><span class="text-gray-500">Term:</span> <span class="font-medium">${loan.loan_term} periods</span></div>
             <div><span class="text-gray-500">Fixed Payment:</span> <span class="font-medium">${loan.fixed_repayment ? fmtMoney(loan.fixed_repayment) : 'Calculated'}</span></div>
             <div><span class="text-gray-500">Start:</span> <span class="font-medium">${fmtDate(loan.start_date)}</span></div>

@@ -1,5 +1,5 @@
 export async function renderSchedule(state, helpers, isWhatIf = false) {
-    const { fmtMoney, fmtDate, fmtPct, api, apiJson, toast, loadSchedule, showModal, closeModal } = helpers;
+    const { fmtMoney, fmtDate, fmtPct, api } = helpers;
     const s = state.schedule;
     if (!s) return;
 
@@ -34,7 +34,7 @@ export async function renderSchedule(state, helpers, isWhatIf = false) {
     let html = `<div class="flex gap-2 mb-3 no-print">
         <button onclick="app.exportSchedule('csv')" class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200">Export CSV</button>
         <button onclick="app.exportSchedule('xlsx')" class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200">Export XLSX</button>
-        <span class="text-xs text-gray-400 ml-2 total-interest">Total Interest: ${fmtMoney(s.summary.total_interest)}</span>
+        <span class="text-xs text-gray-400 ml-2">Total Interest: ${fmtMoney(s.summary.total_interest)}</span>
     </div>`;
 
     const years = Object.keys(yearGroups).sort();
@@ -108,7 +108,7 @@ export async function renderSchedule(state, helpers, isWhatIf = false) {
     }
 }
 
-function renderRateChanges(loan, state, { fmtDate, fmtPct }) {
+function renderRateChanges(loan, state, { fmtDate, fmtPct, escapeHtml }) {
     const container = document.getElementById('rate-changes-list');
     if (!state.currentLoanId) { container.innerHTML = ''; return; }
 
@@ -118,13 +118,13 @@ function renderRateChanges(loan, state, { fmtDate, fmtPct }) {
     }
     container.innerHTML = loan.rate_changes.map(rc => `
         <div class="flex justify-between items-center py-1 border-b last:border-0">
-            <span>${fmtDate(rc.effective_date)} → ${fmtPct(rc.annual_rate)} ${rc.note ? `<span class="text-gray-400">(${rc.note})</span>` : ''}</span>
+            <span>${fmtDate(rc.effective_date)} → ${fmtPct(rc.annual_rate)} ${rc.note ? `<span class="text-gray-400">(${escapeHtml(rc.note)})</span>` : ''}</span>
             <button onclick="app.deleteRateChange(${rc.id})" class="text-red-400 hover:text-red-600 text-xs">Remove</button>
         </div>
     `).join('');
 }
 
-function renderRepaymentChanges(loan, state, { fmtDate, fmtMoney }) {
+function renderRepaymentChanges(loan, state, { fmtDate, fmtMoney, escapeHtml }) {
     const container = document.getElementById('repayment-changes-list');
     if (!state.currentLoanId) { container.innerHTML = ''; return; }
 
@@ -134,13 +134,13 @@ function renderRepaymentChanges(loan, state, { fmtDate, fmtMoney }) {
     }
     container.innerHTML = loan.repayment_changes.map(rc => `
         <div class="flex justify-between items-center py-1 border-b last:border-0">
-            <span>${fmtDate(rc.effective_date)} → ${fmtMoney(rc.amount)}/period ${rc.note ? `<span class="text-gray-400">(${rc.note})</span>` : ''}</span>
+            <span>${fmtDate(rc.effective_date)} → ${fmtMoney(rc.amount)}/period ${rc.note ? `<span class="text-gray-400">(${escapeHtml(rc.note)})</span>` : ''}</span>
             <button onclick="app.deleteRepaymentChange(${rc.id})" class="text-red-400 hover:text-red-600 text-xs">Remove</button>
         </div>
     `).join('');
 }
 
-function renderExtras(loan, state, { fmtDate, fmtMoney }) {
+function renderExtras(loan, state, { fmtDate, fmtMoney, escapeHtml }) {
     const container = document.getElementById('extras-list');
     if (!state.currentLoanId) { container.innerHTML = ''; return; }
 
@@ -150,7 +150,7 @@ function renderExtras(loan, state, { fmtDate, fmtMoney }) {
     }
     container.innerHTML = loan.extra_repayments.map(er => `
         <div class="flex justify-between items-center py-1 border-b last:border-0">
-            <span>${fmtDate(er.payment_date)} → ${fmtMoney(er.amount)} ${er.note ? `<span class="text-gray-400">(${er.note})</span>` : ''}</span>
+            <span>${fmtDate(er.payment_date)} → ${fmtMoney(er.amount)} ${er.note ? `<span class="text-gray-400">(${escapeHtml(er.note)})</span>` : ''}</span>
             <button onclick="app.deleteExtra(${er.id})" class="text-red-400 hover:text-red-600 text-xs">Remove</button>
         </div>
     `).join('');

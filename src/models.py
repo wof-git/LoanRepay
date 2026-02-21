@@ -74,7 +74,6 @@ class PaidRepayment(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     loan_id = Column(Integer, ForeignKey("loans.id", ondelete="CASCADE"), nullable=False)
     repayment_number = Column(Integer, nullable=False)
-    paid_date = Column(Text, server_default="(date('now'))")
 
     __table_args__ = (
         UniqueConstraint("loan_id", "repayment_number"),

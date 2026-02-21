@@ -78,6 +78,16 @@ function fmtPct(n) {
     return (n * 100).toFixed(2) + '%';
 }
 
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
 // --- PMT Calculation ---
 
 function calcPMT(principal, annualRatePct, frequency, loanTerm) {
@@ -198,9 +208,9 @@ function switchTab(tab) {
     ['dashboard', 'schedule', 'scenarios'].forEach(t => {
         document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
     });
-    if (tab === 'dashboard') renderDashboard(state, { fmtMoney, fmtDate, fmtPct, api });
-    if (tab === 'schedule') renderSchedule(state, { fmtMoney, fmtDate, fmtPct, api, apiJson, toast, loadSchedule, showModal, closeModal });
-    if (tab === 'scenarios') renderScenarios(state, { fmtMoney, fmtDate, api, apiJson, toast, showModal, closeModal });
+    if (tab === 'dashboard') renderDashboard(state, { fmtMoney, fmtDate, fmtPct, escapeHtml });
+    if (tab === 'schedule') renderSchedule(state, { fmtMoney, fmtDate, fmtPct, escapeHtml, api, apiJson, toast, loadSchedule, showModal, closeModal });
+    if (tab === 'scenarios') renderScenarios(state, { fmtMoney, fmtDate, escapeHtml, api, apiJson, toast, showModal, closeModal });
 }
 
 // --- Loan CRUD ---
@@ -275,7 +285,7 @@ function showEditLoan() {
         <h2 class="text-lg font-bold mb-4">Edit Loan</h2>
         <form id="edit-loan-form" class="space-y-3">
             <div><label class="block text-sm text-gray-600">Name</label>
-                <input name="name" value="${loan.name}" required class="w-full border rounded px-3 py-1.5 text-sm"></div>
+                <input name="name" value="${escapeHtml(loan.name)}" required class="w-full border rounded px-3 py-1.5 text-sm"></div>
             <div class="grid grid-cols-2 gap-3">
                 <div><label class="block text-sm text-gray-600">Principal ($)</label>
                     <input name="principal" type="number" step="0.01" value="${loan.principal}" required class="w-full border rounded px-3 py-1.5 text-sm"></div>
@@ -506,7 +516,7 @@ async function runWhatIf() {
         showWhatIfDelta(whatIfSchedule);
         renderSchedule(
             { ...state, schedule: whatIfSchedule },
-            { fmtMoney, fmtDate, fmtPct, api, apiJson, toast, loadSchedule, showModal, closeModal },
+            { fmtMoney, fmtDate, fmtPct, escapeHtml, api, apiJson, toast, loadSchedule, showModal, closeModal },
             true
         );
     } catch (e) {
@@ -680,7 +690,7 @@ function resetWhatIf() {
     document.getElementById('delta-banner').classList.add('hidden');
     document.getElementById('whatif-impact').classList.add('hidden');
     if (state.schedule) {
-        renderSchedule(state, { fmtMoney, fmtDate, fmtPct, api, apiJson, toast, loadSchedule, showModal, closeModal });
+        renderSchedule(state, { fmtMoney, fmtDate, fmtPct, escapeHtml, api, apiJson, toast, loadSchedule, showModal, closeModal });
     }
 }
 
@@ -1069,9 +1079,6 @@ window.app = {
     showAddExtra, deleteExtra,
     compareSelected, exportSchedule, _togglePaid, _calcAndFillRepayment,
     _toggleScenario, _deleteScenario,
-    // State access for child modules
-    get state() { return state; },
-    fmtMoney, fmtDate, fmtPct, api, apiJson, toast, loadSchedule,
 };
 
 // --- Init ---

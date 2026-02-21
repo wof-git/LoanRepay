@@ -52,13 +52,6 @@ class RateChangeCreate(BaseModel):
     note: Optional[str] = None
 
 
-class RateChangeUpdate(BaseModel):
-    effective_date: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
-    annual_rate: Optional[float] = Field(default=None, ge=0)
-    adjusted_repayment: Optional[float] = Field(default=None, gt=0)
-    note: Optional[str] = None
-
-
 class RateChangeResponse(BaseModel):
     id: int
     loan_id: int
@@ -74,12 +67,6 @@ class RateChangeResponse(BaseModel):
 class ExtraRepaymentCreate(BaseModel):
     payment_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
     amount: float = Field(gt=0)
-    note: Optional[str] = None
-
-
-class ExtraRepaymentUpdate(BaseModel):
-    payment_date: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
-    amount: Optional[float] = Field(default=None, gt=0)
     note: Optional[str] = None
 
 
@@ -168,13 +155,6 @@ class ScenarioResponse(BaseModel):
     payoff_date: str
     actual_num_repayments: int
     created_at: Optional[str]
-
-    model_config = {"from_attributes": True}
-
-
-class ScenarioDetailResponse(ScenarioResponse):
-    config_json: str
-    schedule_json: str
 
     model_config = {"from_attributes": True}
 

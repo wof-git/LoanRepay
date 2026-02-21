@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from src.database import get_db
 from src.models import Loan, Scenario, RateChange, ExtraRepayment, RepaymentChange
-from src.schemas import ScenarioCreate, ScenarioResponse, ScenarioDetailResponse
+from src.schemas import ScenarioCreate, ScenarioResponse
 from src.routers.schedule import _build_schedule
 
 router = APIRouter(prefix="/api/loans/{loan_id}/scenarios", tags=["scenarios"])

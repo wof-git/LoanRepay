@@ -1,7 +1,7 @@
 let comparisonChart = null;
 
 export async function renderScenarios(state, helpers, comparisonData = null) {
-    const { fmtMoney, fmtDate, api, apiJson, toast, showModal, closeModal } = helpers;
+    const { fmtMoney, fmtDate, escapeHtml, api } = helpers;
     const container = document.getElementById('scenarios-list');
     const compareBtn = document.getElementById('btn-compare');
     const compView = document.getElementById('comparison-view');
@@ -22,14 +22,14 @@ export async function renderScenarios(state, helpers, comparisonData = null) {
             <div class="bg-white rounded-xl shadow p-4">
                 <div class="flex items-start justify-between mb-2">
                     <div class="flex items-center gap-2">
-                        <input type="checkbox" class="scenario-check" value="${s.id}"
+                        <input type="checkbox" value="${s.id}"
                             ${state.selectedScenarios.has(s.id) ? 'checked' : ''}
                             onchange="app._toggleScenario(${s.id}, this.checked)">
-                        <h4 class="font-medium text-gray-800">${s.name}</h4>
+                        <h4 class="font-medium text-gray-800">${escapeHtml(s.name)}</h4>
                     </div>
                     <button onclick="app._deleteScenario(${s.id})" class="text-red-400 hover:text-red-600 text-xs">Delete</button>
                 </div>
-                ${s.description ? `<p class="text-xs text-gray-500 mb-2">${s.description}</p>` : ''}
+                ${s.description ? `<p class="text-xs text-gray-500 mb-2">${escapeHtml(s.description)}</p>` : ''}
                 <div class="grid grid-cols-2 gap-2 text-sm">
                     <div><span class="text-gray-500">Interest:</span> <span class="font-medium">${fmtMoney(s.total_interest)}</span></div>
                     <div><span class="text-gray-500">Total Paid:</span> <span class="font-medium">${fmtMoney(s.total_paid)}</span></div>
@@ -54,15 +54,15 @@ export async function renderScenarios(state, helpers, comparisonData = null) {
     }
 }
 
-function renderComparison(data, { fmtMoney, fmtDate }) {
+function renderComparison(data, { fmtMoney, fmtDate, escapeHtml }) {
     const compView = document.getElementById('comparison-view');
     const cardsContainer = document.getElementById('comparison-cards');
     compView.classList.remove('hidden');
 
     // Comparison cards
     cardsContainer.innerHTML = data.map(s => `
-        <div class="bg-white rounded-xl shadow p-4 comparison-card">
-            <h4 class="font-medium text-gray-800 mb-2">${s.name}</h4>
+        <div class="bg-white rounded-xl shadow p-4">
+            <h4 class="font-medium text-gray-800 mb-2">${escapeHtml(s.name)}</h4>
             <div class="space-y-1 text-sm">
                 <div class="flex justify-between"><span class="text-gray-500">Total Interest:</span> <span class="font-medium">${fmtMoney(s.total_interest)}</span></div>
                 <div class="flex justify-between"><span class="text-gray-500">Total Paid:</span> <span class="font-medium">${fmtMoney(s.total_paid)}</span></div>

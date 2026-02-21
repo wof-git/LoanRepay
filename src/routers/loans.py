@@ -5,8 +5,8 @@ from src.database import get_db
 from src.models import Loan, RateChange, ExtraRepayment, RepaymentChange
 from src.schemas import (
     LoanCreate, LoanUpdate, LoanResponse, LoanDetailResponse,
-    RateChangeCreate, RateChangeUpdate, RateChangeResponse,
-    ExtraRepaymentCreate, ExtraRepaymentUpdate, ExtraRepaymentResponse,
+    RateChangeCreate, RateChangeResponse,
+    ExtraRepaymentCreate, ExtraRepaymentResponse,
     RepaymentChangeCreate, RepaymentChangeResponse,
 )
 
@@ -77,19 +77,6 @@ def add_rate_change(loan_id: int, rc: RateChangeCreate, db: Session = Depends(ge
     return db_rc
 
 
-@router.put("/{loan_id}/rates/{rate_id}", response_model=RateChangeResponse)
-def update_rate_change(loan_id: int, rate_id: int, updates: RateChangeUpdate, db: Session = Depends(get_db)):
-    rc = db.query(RateChange).filter(RateChange.id == rate_id, RateChange.loan_id == loan_id).first()
-    if not rc:
-        raise HTTPException(status_code=404, detail="Rate change not found")
-    update_data = updates.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(rc, key, value)
-    db.commit()
-    db.refresh(rc)
-    return rc
-
-
 @router.delete("/{loan_id}/rates/{rate_id}")
 def delete_rate_change(loan_id: int, rate_id: int, db: Session = Depends(get_db)):
     rc = db.query(RateChange).filter(RateChange.id == rate_id, RateChange.loan_id == loan_id).first()
@@ -112,19 +99,6 @@ def add_extra_repayment(loan_id: int, er: ExtraRepaymentCreate, db: Session = De
     db.commit()
     db.refresh(db_er)
     return db_er
-
-
-@router.put("/{loan_id}/extras/{extra_id}", response_model=ExtraRepaymentResponse)
-def update_extra_repayment(loan_id: int, extra_id: int, updates: ExtraRepaymentUpdate, db: Session = Depends(get_db)):
-    er = db.query(ExtraRepayment).filter(ExtraRepayment.id == extra_id, ExtraRepayment.loan_id == loan_id).first()
-    if not er:
-        raise HTTPException(status_code=404, detail="Extra repayment not found")
-    update_data = updates.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(er, key, value)
-    db.commit()
-    db.refresh(er)
-    return er
 
 
 @router.delete("/{loan_id}/extras/{extra_id}")
