@@ -393,6 +393,87 @@ def test_adjusted_repayment_on_rate_change():
     assert sched_adj.rows[-1].closing_balance == 0.0
 
 
+def test_repayment_change_overrides_fixed():
+    """Repayment change from a date overrides the base fixed_repayment."""
+    sched_base = calculate_schedule(
+        principal=30050.00,
+        annual_rate=0.0575,
+        frequency="fortnightly",
+        start_date=date(2026, 2, 20),
+        loan_term=52,
+        fixed_repayment=612.39,
+    )
+    sched_changed = calculate_schedule(
+        principal=30050.00,
+        annual_rate=0.0575,
+        frequency="fortnightly",
+        start_date=date(2026, 2, 20),
+        loan_term=52,
+        fixed_repayment=612.39,
+        repayment_changes=[{"effective_date": "2026-06-01", "amount": 700.00}],
+    )
+    # Higher repayment from June means less total interest and fewer payments
+    assert sched_changed.total_interest < sched_base.total_interest
+    assert sched_changed.total_repayments < sched_base.total_repayments
+    assert sched_changed.rows[-1].closing_balance == 0.0
+
+    # Early periods (before repayment change) should be identical
+    assert sched_base.rows[0].closing_balance == sched_changed.rows[0].closing_balance
+
+
+def test_repayment_change_reverts_on_removal():
+    """Removing a repayment change returns to the original schedule."""
+    base = calculate_schedule(
+        principal=30050.00,
+        annual_rate=0.0575,
+        frequency="fortnightly",
+        start_date=date(2026, 2, 20),
+        loan_term=52,
+        fixed_repayment=612.39,
+    )
+    after_remove = calculate_schedule(
+        principal=30050.00,
+        annual_rate=0.0575,
+        frequency="fortnightly",
+        start_date=date(2026, 2, 20),
+        loan_term=52,
+        fixed_repayment=612.39,
+        repayment_changes=None,
+    )
+    assert base.total_interest == after_remove.total_interest
+    assert base.total_repayments == after_remove.total_repayments
+
+
+def test_repayment_change_wins_over_rate_adjusted():
+    """When both a rate change adjusted_repayment and a repayment change exist,
+    the most recent by date wins."""
+    # Rate change at Sep 1 sets repayment to 620
+    # Repayment change at Oct 1 sets it to 700 — should win from Oct 1
+    sched = calculate_schedule(
+        principal=30050.00,
+        annual_rate=0.0575,
+        frequency="fortnightly",
+        start_date=date(2026, 2, 20),
+        loan_term=52,
+        fixed_repayment=612.39,
+        rate_changes=[{"effective_date": "2026-09-01", "annual_rate": 0.06, "adjusted_repayment": 620.00}],
+        repayment_changes=[{"effective_date": "2026-10-01", "amount": 700.00}],
+    )
+    # Just rate change adjusted to 620
+    sched_rate_only = calculate_schedule(
+        principal=30050.00,
+        annual_rate=0.0575,
+        frequency="fortnightly",
+        start_date=date(2026, 2, 20),
+        loan_term=52,
+        fixed_repayment=612.39,
+        rate_changes=[{"effective_date": "2026-09-01", "annual_rate": 0.06, "adjusted_repayment": 620.00}],
+    )
+    # With both, should pay off faster than rate-only (700 > 620)
+    assert sched.total_repayments < sched_rate_only.total_repayments
+    assert sched.total_interest < sched_rate_only.total_interest
+
+
 def test_adjusted_repayment_reverts_on_removal():
     """Removing a rate change with adjusted_repayment reverts to original schedule."""
     base_sched = calculate_schedule(

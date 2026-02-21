@@ -387,6 +387,89 @@ def test_delete_rate_change_reverts_schedule(client, created_loan):
     assert reverted["summary"]["total_repayments"] == base["summary"]["total_repayments"]
 
 
+# --- Repayment Changes ---
+
+def test_add_repayment_change(client, created_loan):
+    lid = created_loan["id"]
+    res = client.post(f"/api/loans/{lid}/repayment-changes", json={
+        "effective_date": "2026-06-01",
+        "amount": 700.0,
+        "note": "Increased repayment",
+    })
+    assert res.status_code == 201
+    data = res.json()
+    assert data["amount"] == 700.0
+    assert data["effective_date"] == "2026-06-01"
+
+
+def test_repayment_change_before_start_date(client, created_loan):
+    lid = created_loan["id"]
+    res = client.post(f"/api/loans/{lid}/repayment-changes", json={
+        "effective_date": "2025-01-01",
+        "amount": 700.0,
+    })
+    assert res.status_code == 422
+
+
+def test_delete_repayment_change(client, created_loan):
+    lid = created_loan["id"]
+    rc = client.post(f"/api/loans/{lid}/repayment-changes", json={
+        "effective_date": "2026-06-01",
+        "amount": 700.0,
+    }).json()
+    res = client.delete(f"/api/loans/{lid}/repayment-changes/{rc['id']}")
+    assert res.status_code == 200
+
+
+def test_repayment_change_in_loan_detail(client, created_loan):
+    lid = created_loan["id"]
+    client.post(f"/api/loans/{lid}/repayment-changes", json={
+        "effective_date": "2026-06-01",
+        "amount": 700.0,
+    })
+    loan = client.get(f"/api/loans/{lid}").json()
+    assert "repayment_changes" in loan
+    assert len(loan["repayment_changes"]) == 1
+    assert loan["repayment_changes"][0]["amount"] == 700.0
+
+
+def test_schedule_with_repayment_change(client, created_loan):
+    lid = created_loan["id"]
+    base = client.get(f"/api/loans/{lid}/schedule").json()
+    client.post(f"/api/loans/{lid}/repayment-changes", json={
+        "effective_date": "2026-06-01",
+        "amount": 700.0,
+    })
+    changed = client.get(f"/api/loans/{lid}/schedule").json()
+    # Higher repayment = less total interest and fewer payments
+    assert changed["summary"]["total_interest"] < base["summary"]["total_interest"]
+    assert changed["summary"]["total_repayments"] < base["summary"]["total_repayments"]
+
+
+def test_delete_repayment_change_reverts_schedule(client, created_loan):
+    lid = created_loan["id"]
+    base = client.get(f"/api/loans/{lid}/schedule").json()
+    rc = client.post(f"/api/loans/{lid}/repayment-changes", json={
+        "effective_date": "2026-06-01",
+        "amount": 700.0,
+    }).json()
+    client.delete(f"/api/loans/{lid}/repayment-changes/{rc['id']}")
+    reverted = client.get(f"/api/loans/{lid}/schedule").json()
+    assert reverted["summary"]["total_interest"] == base["summary"]["total_interest"]
+    assert reverted["summary"]["total_repayments"] == base["summary"]["total_repayments"]
+
+
+def test_delete_loan_cascades_repayment_changes(client, created_loan):
+    """Repayment changes should be deleted when loan is deleted."""
+    lid = created_loan["id"]
+    client.post(f"/api/loans/{lid}/repayment-changes", json={
+        "effective_date": "2026-06-01",
+        "amount": 700.0,
+    })
+    client.delete(f"/api/loans/{lid}")
+    assert client.get(f"/api/loans/{lid}").status_code == 404
+
+
 # --- Health ---
 
 def test_health(client):

@@ -5,8 +5,9 @@ export function renderSchedule(state, helpers, isWhatIf = false) {
 
     const today = new Date().toISOString().split('T')[0];
 
-    // Render rate changes list
+    // Render rate changes, repayment changes, extras lists
     renderRateChanges(state, helpers);
+    renderRepaymentChanges(state, helpers);
     renderExtras(state, helpers);
 
     // Group rows by year
@@ -118,6 +119,27 @@ async function renderRateChanges(state, { fmtDate, fmtPct, api }) {
             <div class="flex justify-between items-center py-1 border-b last:border-0">
                 <span>${fmtDate(rc.effective_date)} → ${fmtPct(rc.annual_rate)} ${rc.note ? `<span class="text-gray-400">(${rc.note})</span>` : ''}</span>
                 <button onclick="app.deleteRateChange(${rc.id})" class="text-red-400 hover:text-red-600 text-xs">Remove</button>
+            </div>
+        `).join('');
+    } catch (e) {
+        container.innerHTML = '<span class="text-red-400">Failed to load</span>';
+    }
+}
+
+async function renderRepaymentChanges(state, { fmtDate, fmtMoney, api }) {
+    const container = document.getElementById('repayment-changes-list');
+    if (!state.currentLoanId) { container.innerHTML = ''; return; }
+
+    try {
+        const loan = await api(`/loans/${state.currentLoanId}`);
+        if (!loan.repayment_changes || loan.repayment_changes.length === 0) {
+            container.innerHTML = '<span class="text-gray-400">No repayment changes</span>';
+            return;
+        }
+        container.innerHTML = loan.repayment_changes.map(rc => `
+            <div class="flex justify-between items-center py-1 border-b last:border-0">
+                <span>${fmtDate(rc.effective_date)} → ${fmtMoney(rc.amount)}/period ${rc.note ? `<span class="text-gray-400">(${rc.note})</span>` : ''}</span>
+                <button onclick="app.deleteRepaymentChange(${rc.id})" class="text-red-400 hover:text-red-600 text-xs">Remove</button>
             </div>
         `).join('');
     } catch (e) {

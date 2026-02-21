@@ -156,23 +156,41 @@ def get_repayment_at_date(
     payment_date: date,
     base_repayment: float | None,
     rate_changes: list[dict] | None,
+    repayment_changes: list[dict] | None = None,
 ) -> float | None:
     """Look up the applicable repayment at a given date.
 
-    Rate changes may carry an adjusted_repayment. The most recent one
-    at or before payment_date takes effect. If none have one, returns base_repayment.
+    Merges two sources of repayment overrides chronologically:
+    - rate_changes with adjusted_repayment
+    - standalone repayment_changes (effective_date + amount)
+
+    The most recent override at or before payment_date wins.
+    If none apply, returns base_repayment.
     """
-    if not rate_changes or base_repayment is None:
+    if base_repayment is None:
         return base_repayment
+
+    # Build unified list of (effective_date, amount) overrides
+    overrides = []
+    if rate_changes:
+        for rc in rate_changes:
+            adj = rc.get("adjusted_repayment")
+            if adj is not None:
+                overrides.append((rc["effective_date"], adj))
+    if repayment_changes:
+        for rpc in repayment_changes:
+            overrides.append((rpc["effective_date"], rpc["amount"]))
+
+    if not overrides:
+        return base_repayment
+
     current = base_repayment
-    for rc in sorted(rate_changes, key=lambda x: x["effective_date"]):
-        eff = rc["effective_date"]
+    for eff_raw, amount in sorted(overrides, key=lambda x: x[0]):
+        eff = eff_raw
         if isinstance(eff, str):
             eff = date.fromisoformat(eff)
         if payment_date >= eff:
-            adj = rc.get("adjusted_repayment")
-            if adj is not None:
-                current = adj
+            current = amount
         else:
             break
     return current
@@ -210,6 +228,7 @@ def calculate_schedule(
     rate_changes: list[dict] | None = None,
     extra_repayments: list[dict] | None = None,
     paid_set: set[int] | None = None,
+    repayment_changes: list[dict] | None = None,
 ) -> ScheduleResult:
     """Generate a full amortization schedule.
 
@@ -220,11 +239,13 @@ def calculate_schedule(
         start_date: Loan start date.
         loan_term: Number of periods for PMT calculation.
         fixed_repayment: Base payment amount (None = use calculated PMT).
-            Rate changes with adjusted_repayment override this from their effective date.
+            Rate changes with adjusted_repayment and repayment_changes
+            override this from their effective date.
         rate_changes: List of {"effective_date": ..., "annual_rate": ...,
             "adjusted_repayment": ... (optional)}.
         extra_repayments: List of {"payment_date": ..., "amount": ...}.
         paid_set: Set of repayment numbers that have been marked as paid.
+        repayment_changes: List of {"effective_date": ..., "amount": ...}.
     """
     if isinstance(start_date, str):
         start_date = date.fromisoformat(start_date)
@@ -252,8 +273,8 @@ def calculate_schedule(
 
         calculated_payment = pmt(rate_per_period, remaining_term, balance)
 
-        # Determine repayment for this period — rate changes may override
-        period_repayment = get_repayment_at_date(payment_date, fixed_repayment, rate_changes)
+        # Determine repayment for this period — rate/repayment changes may override
+        period_repayment = get_repayment_at_date(payment_date, fixed_repayment, rate_changes, repayment_changes)
 
         if period_repayment is not None:
             actual_payment = period_repayment
@@ -343,6 +364,7 @@ def find_repayment_for_target_date(
     extra_repayments: list[dict] | None = None,
     fixed_repayment: float | None = None,
     adjust_rate_idx: int | None = None,
+    repayment_changes: list[dict] | None = None,
 ) -> dict:
     """Binary search for the repayment amount that pays off by target_date.
 
@@ -380,6 +402,7 @@ def find_repayment_for_target_date(
                 fixed_repayment=fixed_repayment,
                 rate_changes=trial_rates,
                 extra_repayments=extra_repayments,
+                repayment_changes=repayment_changes,
             )
         else:
             sched = calculate_schedule(
@@ -391,6 +414,7 @@ def find_repayment_for_target_date(
                 fixed_repayment=mid,
                 rate_changes=rate_changes,
                 extra_repayments=extra_repayments,
+                repayment_changes=repayment_changes,
             )
 
         if not sched.rows:

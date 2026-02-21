@@ -2,11 +2,12 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from src.database import get_db
-from src.models import Loan, RateChange, ExtraRepayment
+from src.models import Loan, RateChange, ExtraRepayment, RepaymentChange
 from src.schemas import (
     LoanCreate, LoanUpdate, LoanResponse, LoanDetailResponse,
     RateChangeCreate, RateChangeUpdate, RateChangeResponse,
     ExtraRepaymentCreate, ExtraRepaymentUpdate, ExtraRepaymentResponse,
+    RepaymentChangeCreate, RepaymentChangeResponse,
 )
 
 router = APIRouter(prefix="/api/loans", tags=["loans"])
@@ -134,3 +135,29 @@ def delete_extra_repayment(loan_id: int, extra_id: int, db: Session = Depends(ge
     db.delete(er)
     db.commit()
     return {"detail": "Extra repayment deleted"}
+
+
+# --- Repayment Changes ---
+
+@router.post("/{loan_id}/repayment-changes", response_model=RepaymentChangeResponse, status_code=201)
+def add_repayment_change(loan_id: int, rc: RepaymentChangeCreate, db: Session = Depends(get_db)):
+    loan = db.query(Loan).filter(Loan.id == loan_id).first()
+    if not loan:
+        raise HTTPException(status_code=404, detail="Loan not found")
+    if rc.effective_date < loan.start_date:
+        raise HTTPException(status_code=422, detail="Repayment change cannot be before loan start date")
+    db_rc = RepaymentChange(loan_id=loan_id, **rc.model_dump())
+    db.add(db_rc)
+    db.commit()
+    db.refresh(db_rc)
+    return db_rc
+
+
+@router.delete("/{loan_id}/repayment-changes/{change_id}")
+def delete_repayment_change(loan_id: int, change_id: int, db: Session = Depends(get_db)):
+    rc = db.query(RepaymentChange).filter(RepaymentChange.id == change_id, RepaymentChange.loan_id == loan_id).first()
+    if not rc:
+        raise HTTPException(status_code=404, detail="Repayment change not found")
+    db.delete(rc)
+    db.commit()
+    return {"detail": "Repayment change deleted"}

@@ -742,6 +742,55 @@ async function deleteRateChange(id) {
     }
 }
 
+// --- Repayment Changes ---
+
+function showAddRepaymentChange() {
+    showModal(`
+        <h2 class="text-lg font-bold mb-4">Add Repayment Change</h2>
+        <p class="text-xs text-gray-500 mb-3">Set a new fixed repayment amount from a specific date. The "additional" column in the schedule will show the difference from the minimum calculated payment.</p>
+        <form id="add-repayment-change-form" class="space-y-3">
+            <div><label class="block text-sm text-gray-600">Effective Date</label>
+                <input name="effective_date" type="date" required class="w-full border rounded px-3 py-1.5 text-sm"></div>
+            <div><label class="block text-sm text-gray-600">New Repayment Amount ($)</label>
+                <input name="amount" type="number" step="0.01" required class="w-full border rounded px-3 py-1.5 text-sm" placeholder="700.00"></div>
+            <div><label class="block text-sm text-gray-600">Note (optional)</label>
+                <input name="note" class="w-full border rounded px-3 py-1.5 text-sm" placeholder="Increased repayment"></div>
+            <div class="flex gap-2 pt-2">
+                <button type="submit" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Save</button>
+                <button type="button" onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
+            </div>
+        </form>
+    `);
+    document.getElementById('add-repayment-change-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        try {
+            await apiJson(`/loans/${state.currentLoanId}/repayment-changes`, 'POST', {
+                effective_date: fd.get('effective_date'),
+                amount: parseFloat(fd.get('amount')),
+                note: fd.get('note') || null,
+            });
+            closeModal();
+            toast('Repayment change added!', 'success');
+            await loadSchedule();
+            switchTab('schedule');
+        } catch (e) {
+            toast('Failed: ' + e.message, 'error');
+        }
+    });
+}
+
+async function deleteRepaymentChange(id) {
+    try {
+        await api(`/loans/${state.currentLoanId}/repayment-changes/${id}`, { method: 'DELETE' });
+        toast('Repayment change removed', 'success');
+        await loadSchedule();
+        switchTab('schedule');
+    } catch (e) {
+        toast('Failed: ' + e.message, 'error');
+    }
+}
+
 // --- Extra Repayments ---
 
 function showAddExtra() {
@@ -837,7 +886,9 @@ window.app = {
     showImport, closeModal, startRenameLoan, cancelRenameLoan,
     toggleWhatIf, onWhatIfChange, applyWhatIf,
     saveWhatIfScenario, resetWhatIf, calcPayoffTarget,
-    showAddRateChange, deleteRateChange, showAddExtra, deleteExtra,
+    showAddRateChange, deleteRateChange,
+    showAddRepaymentChange, deleteRepaymentChange,
+    showAddExtra, deleteExtra,
     compareSelected, exportSchedule, _togglePaid, _calcAndFillRepayment,
     // State access for child modules
     get state() { return state; },

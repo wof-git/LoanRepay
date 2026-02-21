@@ -40,6 +40,7 @@ class LoanResponse(BaseModel):
 class LoanDetailResponse(LoanResponse):
     rate_changes: list["RateChangeResponse"]
     extra_repayments: list["ExtraRepaymentResponse"]
+    repayment_changes: list["RepaymentChangeResponse"]
 
     model_config = {"from_attributes": True}
 
@@ -86,6 +87,23 @@ class ExtraRepaymentResponse(BaseModel):
     id: int
     loan_id: int
     payment_date: str
+    amount: float
+    note: Optional[str]
+    created_at: Optional[str]
+
+    model_config = {"from_attributes": True}
+
+
+class RepaymentChangeCreate(BaseModel):
+    effective_date: str
+    amount: float = Field(gt=0)
+    note: Optional[str] = None
+
+
+class RepaymentChangeResponse(BaseModel):
+    id: int
+    loan_id: int
+    effective_date: str
     amount: float
     note: Optional[str]
     created_at: Optional[str]

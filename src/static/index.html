@@ -107,19 +107,26 @@
 
         <!-- Schedule Tab -->
         <div id="tab-schedule" class="tab-content hidden">
-            <!-- Rate Changes & Extras -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <!-- Rate Changes, Repayment Changes & Extras -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div class="bg-white rounded-xl shadow p-4">
                     <div class="flex justify-between items-center mb-2">
                         <h3 class="text-sm font-medium text-gray-700">Rate Changes</h3>
-                        <button onclick="app.showAddRateChange()" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">+ Add Rate Change</button>
+                        <button onclick="app.showAddRateChange()" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">+ Add</button>
                     </div>
                     <div id="rate-changes-list" class="text-sm space-y-1"></div>
                 </div>
                 <div class="bg-white rounded-xl shadow p-4">
                     <div class="flex justify-between items-center mb-2">
+                        <h3 class="text-sm font-medium text-gray-700">Repayment Changes</h3>
+                        <button onclick="app.showAddRepaymentChange()" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">+ Add</button>
+                    </div>
+                    <div id="repayment-changes-list" class="text-sm space-y-1"></div>
+                </div>
+                <div class="bg-white rounded-xl shadow p-4">
+                    <div class="flex justify-between items-center mb-2">
                         <h3 class="text-sm font-medium text-gray-700">Extra Repayments</h3>
-                        <button onclick="app.showAddExtra()" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">+ Add Extra</button>
+                        <button onclick="app.showAddExtra()" class="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200">+ Add</button>
                     </div>
                     <div id="extras-list" class="text-sm space-y-1"></div>
                 </div>
