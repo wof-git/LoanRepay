@@ -8,7 +8,8 @@ from src.schemas import (
     PayoffTargetResponse, RateChangeCreate, RateChangeOption, RateChangePreviewResponse,
     RepaymentChangeCreate, RepaymentChangePreviewResponse,
 )
-from src.calculator import calculate_schedule, find_repayment_for_target_date
+from datetime import date
+from src.calculator import calculate_schedule, find_repayment_for_target_date, add_period
 
 router = APIRouter(prefix="/api/loans/{loan_id}", tags=["schedule"])
 
@@ -48,8 +49,20 @@ def _build_schedule(loan: Loan, db: Session, whatif: WhatIfRequest | None = None
     paid_set = {p.repayment_number for p in db_paid}
 
     fixed_repayment = loan.fixed_repayment
-    if whatif and whatif.fixed_repayment is not None:
-        fixed_repayment = whatif.fixed_repayment
+    whatif_repayment = whatif.fixed_repayment if whatif else None
+
+    # If what-if changes the repayment and there are paid periods, apply it
+    # only from the first unpaid period onward (paid periods stay unchanged).
+    if whatif_repayment is not None and paid_set:
+        max_paid = max(paid_set)
+        first_unpaid_date = add_period(
+            date.fromisoformat(loan.start_date) if isinstance(loan.start_date, str) else loan.start_date,
+            loan.frequency,
+            max_paid + 1,
+        ).isoformat()
+        repayment_changes.append({"effective_date": first_unpaid_date, "amount": whatif_repayment})
+    elif whatif_repayment is not None:
+        fixed_repayment = whatif_repayment
 
     result = calculate_schedule(
         principal=loan.principal,

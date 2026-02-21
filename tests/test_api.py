@@ -573,6 +573,26 @@ def test_whatif_additive_rate_change(client, created_loan):
     assert whatif["summary"]["total_interest"] > base["summary"]["total_interest"]
 
 
+def test_whatif_preserves_paid_periods(client, created_loan):
+    """What-if repayment change should not alter already-paid periods."""
+    lid = created_loan["id"]
+    # Get base schedule and mark first 3 payments as paid
+    base = client.get(f"/api/loans/{lid}/schedule").json()
+    for i in range(1, 4):
+        client.post(f"/api/loans/{lid}/paid/{i}")
+    # What-if with a different repayment
+    whatif = client.post(f"/api/loans/{lid}/schedule/whatif", json={
+        "fixed_repayment": 800.0,
+    }).json()
+    # Paid periods should have identical balances to the base schedule
+    for i in range(3):
+        assert whatif["rows"][i]["opening_balance"] == base["rows"][i]["opening_balance"]
+        assert whatif["rows"][i]["closing_balance"] == base["rows"][i]["closing_balance"]
+        assert whatif["rows"][i]["interest"] == base["rows"][i]["interest"]
+    # But unpaid periods should differ (higher repayment = lower closing balance)
+    assert whatif["rows"][3]["closing_balance"] < base["rows"][3]["closing_balance"]
+
+
 # --- Health ---
 
 def test_health(client):
