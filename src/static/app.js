@@ -1071,7 +1071,7 @@ async function _deleteScenario(id) {
 window.app = {
     switchTab, showCreateLoan, showEditLoan, confirmDeleteLoan, deleteLoan,
     showImport, closeModal, startRenameLoan, cancelRenameLoan,
-    toggleWhatIf, onWhatIfChange, applyWhatIf, _confirmApplyWhatIf,
+    toggleWhatIf, applyWhatIf, _confirmApplyWhatIf,
     saveWhatIfScenario, resetWhatIf, calcPayoffTarget,
     showAddRateChange, deleteRateChange,
     showAddRepaymentChange, deleteRepaymentChange,
@@ -1081,4 +1081,14 @@ window.app = {
 };
 
 // --- Init ---
+
+// Bind what-if inputs via addEventListener (Safari ignores inline oninput on range inputs with custom CSS)
+document.getElementById('whatif-slider').addEventListener('input', () => onWhatIfChange('slider'));
+document.getElementById('whatif-slider').addEventListener('change', () => onWhatIfChange('slider'));
+document.getElementById('whatif-repayment').addEventListener('input', () => onWhatIfChange('repayment'));
+document.getElementById('whatif-rate-date').addEventListener('change', () => onWhatIfChange());
+document.getElementById('whatif-rate-value').addEventListener('input', () => onWhatIfChange());
+document.getElementById('whatif-extra-date').addEventListener('change', () => onWhatIfChange());
+document.getElementById('whatif-extra-amount').addEventListener('input', () => onWhatIfChange());
+
 loadLoans();

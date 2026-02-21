@@ -152,22 +152,22 @@
                         <div>
                             <label class="block text-xs text-gray-600 mb-1">Repayment Amount</label>
                             <div class="flex items-center gap-2">
-                                <input type="range" id="whatif-slider" min="100" max="2000" step="1" class="flex-1" oninput="app.onWhatIfChange('slider')">
-                                <input type="number" id="whatif-repayment" class="w-24 border rounded px-2 py-1 text-sm" oninput="app.onWhatIfChange('repayment')">
+                                <input type="range" id="whatif-slider" min="100" max="2000" step="1" class="flex-1">
+                                <input type="number" id="whatif-repayment" class="w-24 border rounded px-2 py-1 text-sm">
                             </div>
                         </div>
                         <div>
                             <label class="block text-xs text-gray-600 mb-1">What-If Rate Change</label>
                             <div class="flex gap-1">
-                                <input type="date" id="whatif-rate-date" class="border rounded px-2 py-1 text-sm flex-1" onchange="app.onWhatIfChange()">
-                                <input type="number" id="whatif-rate-value" step="0.01" placeholder="%" class="w-20 border rounded px-2 py-1 text-sm" oninput="app.onWhatIfChange()">
+                                <input type="date" id="whatif-rate-date" class="border rounded px-2 py-1 text-sm flex-1">
+                                <input type="number" id="whatif-rate-value" step="0.01" placeholder="%" class="w-20 border rounded px-2 py-1 text-sm">
                             </div>
                         </div>
                         <div>
                             <label class="block text-xs text-gray-600 mb-1">What-If Lump Sum</label>
                             <div class="flex gap-1">
-                                <input type="date" id="whatif-extra-date" class="border rounded px-2 py-1 text-sm flex-1" onchange="app.onWhatIfChange()">
-                                <input type="number" id="whatif-extra-amount" step="100" placeholder="$" class="w-24 border rounded px-2 py-1 text-sm" oninput="app.onWhatIfChange()">
+                                <input type="date" id="whatif-extra-date" class="border rounded px-2 py-1 text-sm flex-1">
+                                <input type="number" id="whatif-extra-amount" step="100" placeholder="$" class="w-24 border rounded px-2 py-1 text-sm">
                             </div>
                         </div>
                     </div>
