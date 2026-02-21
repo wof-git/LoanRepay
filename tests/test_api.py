@@ -361,6 +361,33 @@ def test_rate_change_without_adjust_keeps_existing(client, created_loan):
     assert loan["fixed_repayment"] == 612.39
 
 
+def test_rate_change_preview_respects_paid_periods(client, created_loan):
+    """Option B (adjust repayment) should differ when payments are already made."""
+    lid = created_loan["id"]
+
+    # Preview with no paid periods
+    preview_clean = client.post(f"/api/loans/{lid}/rates/preview", json={
+        "effective_date": "2026-09-01",
+        "annual_rate": 0.06,
+    }).json()
+
+    # Mark first 5 payments as paid
+    for i in range(1, 6):
+        client.post(f"/api/loans/{lid}/paid/{i}")
+
+    # Preview with 5 paid periods — option B should differ because
+    # paid periods are locked at $612.39, only future ones adjust
+    preview_paid = client.post(f"/api/loans/{lid}/rates/preview", json={
+        "effective_date": "2026-09-01",
+        "annual_rate": 0.06,
+    }).json()
+
+    # Option A should be the same (repayment unchanged)
+    assert preview_clean["options"][0]["fixed_repayment"] == preview_paid["options"][0]["fixed_repayment"]
+    # Option B adjusted repayment should differ when paid periods are locked in
+    assert preview_clean["options"][1]["fixed_repayment"] != preview_paid["options"][1]["fixed_repayment"]
+
+
 # --- Health ---
 
 def test_health(client):

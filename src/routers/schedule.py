@@ -149,11 +149,13 @@ def preview_rate_change(loan_id: int, rc: RateChangeCreate, db: Session = Depend
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
 
-    # Build existing rate changes + extras from DB
+    # Build existing rate changes, extras, and paid set from DB
     db_rates = db.query(RateChange).filter(RateChange.loan_id == loan.id).all()
     existing_rates = [{"effective_date": r.effective_date, "annual_rate": r.annual_rate} for r in db_rates]
     db_extras = db.query(ExtraRepayment).filter(ExtraRepayment.loan_id == loan.id).all()
     extras = [{"payment_date": er.payment_date, "amount": er.amount} for er in db_extras]
+    db_paid = db.query(PaidRepayment).filter(PaidRepayment.loan_id == loan.id).all()
+    paid_set = {p.repayment_number for p in db_paid} or None
 
     # Current schedule (before this rate change)
     current = calculate_schedule(
@@ -165,6 +167,7 @@ def preview_rate_change(loan_id: int, rc: RateChangeCreate, db: Session = Depend
         fixed_repayment=loan.fixed_repayment,
         rate_changes=existing_rates or None,
         extra_repayments=extras or None,
+        paid_set=paid_set,
     )
     current_payoff = current.payoff_date
     current_interest = current.total_interest
@@ -185,6 +188,7 @@ def preview_rate_change(loan_id: int, rc: RateChangeCreate, db: Session = Depend
             fixed_repayment=loan.fixed_repayment,
             rate_changes=new_rates,
             extra_repayments=extras or None,
+            paid_set=paid_set,
         )
         options.append(RateChangeOption(
             label=f"Keep repayment at ${loan.fixed_repayment:,.2f}",
@@ -197,6 +201,7 @@ def preview_rate_change(loan_id: int, rc: RateChangeCreate, db: Session = Depend
         ))
 
         # Option B: Adjust repayment to maintain original payoff date
+        # Lock in paid periods at the old amount — only future periods change
         target_result = find_repayment_for_target_date(
             principal=loan.principal,
             annual_rate=loan.annual_rate,
@@ -206,6 +211,8 @@ def preview_rate_change(loan_id: int, rc: RateChangeCreate, db: Session = Depend
             target_date=current_payoff,
             rate_changes=new_rates,
             extra_repayments=extras or None,
+            paid_set=paid_set,
+            paid_fixed_repayment=loan.fixed_repayment,
         )
         if "error" not in target_result:
             new_repayment = target_result["required_repayment"]
@@ -229,6 +236,7 @@ def preview_rate_change(loan_id: int, rc: RateChangeCreate, db: Session = Depend
             fixed_repayment=None,
             rate_changes=new_rates,
             extra_repayments=extras or None,
+            paid_set=paid_set,
         )
         options.append(RateChangeOption(
             label="PMT auto-adjusts (no fixed repayment)",

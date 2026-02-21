@@ -184,6 +184,7 @@ def calculate_schedule(
     rate_changes: list[dict] | None = None,
     extra_repayments: list[dict] | None = None,
     paid_set: set[int] | None = None,
+    paid_fixed_repayment: float | None = None,
 ) -> ScheduleResult:
     """Generate a full amortization schedule.
 
@@ -197,6 +198,8 @@ def calculate_schedule(
         rate_changes: List of {"effective_date": ..., "annual_rate": ...}.
         extra_repayments: List of {"payment_date": ..., "amount": ...}.
         paid_set: Set of repayment numbers that have been marked as paid.
+        paid_fixed_repayment: For paid periods, use this amount instead of fixed_repayment.
+            Locks in historical payments when the repayment amount is being changed.
     """
     if isinstance(start_date, str):
         start_date = date.fromisoformat(start_date)
@@ -224,8 +227,13 @@ def calculate_schedule(
 
         calculated_payment = pmt(rate_per_period, remaining_term, balance)
 
-        if fixed_repayment is not None:
-            actual_payment = fixed_repayment
+        # For paid periods, lock in the original repayment amount
+        period_repayment = fixed_repayment
+        if i in paid_set and paid_fixed_repayment is not None:
+            period_repayment = paid_fixed_repayment
+
+        if period_repayment is not None:
+            actual_payment = period_repayment
             additional = round(actual_payment - calculated_payment, 2)
             # Suppress tiny rounding artifacts (< 10c) from cumulative drift
             if abs(additional) < 0.10:
@@ -249,12 +257,12 @@ def calculate_schedule(
             else:
                 actual_payment = round(interest + balance - extra, 2)
                 principal_from_payment = round(actual_payment - interest, 2)
-                additional = round(actual_payment - calculated_payment, 2) if fixed_repayment is not None else 0.0
+                additional = round(actual_payment - calculated_payment, 2) if period_repayment is not None else 0.0
             total_principal = balance
 
         # Also cap calculated_payment if it's the final period
         if principal_from_payment + extra >= balance:
-            if fixed_repayment is not None:
+            if period_repayment is not None:
                 calculated_payment = round(interest + (balance - extra), 2)
                 additional = round(actual_payment - calculated_payment, 2)
 
@@ -310,8 +318,14 @@ def find_repayment_for_target_date(
     target_date: date | str,
     rate_changes: list[dict] | None = None,
     extra_repayments: list[dict] | None = None,
+    paid_set: set[int] | None = None,
+    paid_fixed_repayment: float | None = None,
 ) -> dict:
-    """Binary search for the repayment amount that pays off by target_date."""
+    """Binary search for the repayment amount that pays off by target_date.
+
+    If paid_set and paid_fixed_repayment are provided, paid periods keep
+    the old repayment amount and only unpaid periods use the trial amount.
+    """
     if isinstance(target_date, str):
         target_date = date.fromisoformat(target_date)
     if isinstance(start_date, str):
@@ -336,6 +350,8 @@ def find_repayment_for_target_date(
             fixed_repayment=mid,
             rate_changes=rate_changes,
             extra_repayments=extra_repayments,
+            paid_set=paid_set,
+            paid_fixed_repayment=paid_fixed_repayment,
         )
         if not sched.rows:
             break

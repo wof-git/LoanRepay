@@ -354,3 +354,41 @@ def test_prorate_schedule_differs_from_simple():
     )
     # The total interest should differ because of pro-rating
     assert sched_boundary.total_interest != sched_mid.total_interest
+
+
+def test_paid_fixed_repayment_locks_in_history():
+    """Paid periods should use paid_fixed_repayment, not the new fixed_repayment."""
+    paid_set = {1, 2, 3, 4, 5}
+
+    # Schedule where all periods use $612.39
+    sched_uniform = calculate_schedule(
+        principal=30050.00,
+        annual_rate=0.0575,
+        frequency="fortnightly",
+        start_date=date(2026, 2, 20),
+        loan_term=52,
+        fixed_repayment=650.00,
+    )
+
+    # Schedule where paid periods use $612.39 but future periods use $650
+    sched_split = calculate_schedule(
+        principal=30050.00,
+        annual_rate=0.0575,
+        frequency="fortnightly",
+        start_date=date(2026, 2, 20),
+        loan_term=52,
+        fixed_repayment=650.00,
+        paid_set=paid_set,
+        paid_fixed_repayment=612.39,
+    )
+
+    # Paid periods should differ — paid rows used $612.39 in split version
+    # but $650 in the uniform version
+    for i in range(5):
+        row_uniform = sched_uniform.rows[i]
+        row_split = sched_split.rows[i]
+        assert row_uniform.closing_balance != row_split.closing_balance
+
+    # Both should still pay off
+    assert sched_uniform.rows[-1].closing_balance == 0.0
+    assert sched_split.rows[-1].closing_balance == 0.0
