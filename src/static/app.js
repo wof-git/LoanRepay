@@ -598,13 +598,12 @@ async function _confirmApplyWhatIf(rep) {
     }
 }
 
-async function saveWhatIfScenario(onSaved = null) {
+function _gatherWhatIfParams() {
     const loan = state.loans.find(l => l.id === state.currentLoanId);
     const loanRepayment = loan?.fixed_repayment;
     const calcPmt = state.schedule?.rows[0]?.calculated_pmt;
     const currentRep = loanRepayment || calcPmt || 0;
 
-    // Gather what-if params
     const whatIfParams = {};
     const includes = [];
 
@@ -613,7 +612,6 @@ async function saveWhatIfScenario(onSaved = null) {
         whatIfParams.whatif_fixed_repayment = sliderRep;
         includes.push(`Repayment ${fmtMoney(sliderRep)}`);
     } else if (sliderRep > 0 && loanRepayment === null) {
-        // No fixed repayment on loan — any slider value counts
         whatIfParams.whatif_fixed_repayment = sliderRep;
         includes.push(`Repayment ${fmtMoney(sliderRep)}`);
     }
@@ -632,11 +630,16 @@ async function saveWhatIfScenario(onSaved = null) {
         includes.push(`Lump sum ${fmtMoney(extraAmt)} on ${fmtDate(extraDate)}`);
     }
 
+    return { whatIfParams, includes };
+}
+
+async function saveWhatIfScenario() {
+    const { whatIfParams, includes } = _gatherWhatIfParams();
+    const autoDesc = includes.length > 0 ? includes.join('; ') : '';
+
     const includesHtml = includes.length > 0
         ? `<div class="bg-indigo-50 border border-indigo-200 rounded p-2 mb-3"><p class="text-xs font-medium text-indigo-700 mb-1">Includes:</p><ul class="text-xs text-indigo-600 list-disc list-inside">${includes.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul></div>`
         : '<p class="text-xs text-gray-400 mb-3">No what-if adjustments — base state will be saved.</p>';
-
-    const autoDesc = includes.length > 0 ? includes.join('; ') : '';
 
     showModal(`
         <h2 class="text-lg font-bold mb-4">Save as Scenario</h2>
@@ -663,7 +666,6 @@ async function saveWhatIfScenario(onSaved = null) {
             });
             closeModal();
             toast('Scenario saved!', 'success');
-            onSaved?.();
         } catch (e) {
             toast('Failed: ' + e.message, 'error');
         }
@@ -1220,27 +1222,19 @@ async function _loadScenario(id) {
     try {
         const data = await api(`/loans/${state.currentLoanId}/scenarios/${id}`);
 
-        showModal(`
-            <h2 class="text-lg font-bold mb-2">Load Scenario: "${escapeHtml(data.name)}"</h2>
-            <p class="text-sm text-gray-600 mb-4">This will replace your current What-If Explorer settings.</p>
-            <div class="flex gap-2">
-                <button id="confirm-load-btn" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Load</button>
-                <button id="confirm-save-first-btn" class="bg-indigo-600 text-white px-4 py-1.5 rounded text-sm hover:bg-indigo-700">Save Current First</button>
-                <button id="confirm-cancel-btn" class="text-gray-500 px-4 py-1.5 text-sm hover:text-gray-700">Cancel</button>
-            </div>
-        `);
+        // Auto-save current what-if settings if there are any changes
+        const { whatIfParams, includes } = _gatherWhatIfParams();
+        if (includes.length > 0) {
+            const timestamp = new Date().toLocaleString('en-AU', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+            await apiJson(`/loans/${state.currentLoanId}/scenarios`, 'POST', {
+                name: `Auto-save ${timestamp}`,
+                description: includes.join('; '),
+                ...whatIfParams,
+            });
+            toast('Current settings auto-saved', 'info');
+        }
 
-        document.getElementById('confirm-load-btn').addEventListener('click', () => {
-            closeModal();
-            _doLoadScenario(data);
-        });
-        document.getElementById('confirm-save-first-btn').addEventListener('click', () => {
-            closeModal();
-            saveWhatIfScenario(() => _doLoadScenario(data));
-        });
-        document.getElementById('confirm-cancel-btn').addEventListener('click', () => {
-            closeModal();
-        });
+        _doLoadScenario(data);
 
     } catch (e) {
         toast('Failed to load scenario: ' + e.message, 'error');
