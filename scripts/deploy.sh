@@ -14,14 +14,14 @@ NAS_PATH="${LOANREPAY_NAS_PATH:?Set LOANREPAY_NAS_PATH (e.g. /volume3/Wof/repo/L
 NAS_URL="${LOANREPAY_NAS_URL:?Set LOANREPAY_NAS_URL (e.g. http://host:5050)}"
 
 echo "=== Pulling latest from Gitea on NAS ==="
-ssh ${NAS_HOST} "
+ssh "${NAS_HOST}" "
   export PATH=/usr/local/bin:\$PATH
   cd ${NAS_PATH}
   git pull origin master
 "
 
 echo "=== Building and starting on NAS ==="
-ssh ${NAS_HOST} "
+ssh "${NAS_HOST}" "
   export PATH=/usr/local/bin:\$PATH
   cd ${NAS_PATH}
   mkdir -p data
@@ -32,7 +32,7 @@ ssh ${NAS_HOST} "
 "
 
 echo "=== Setting up backup directory ==="
-ssh ${NAS_HOST} "
+ssh "${NAS_HOST}" "
   mkdir -p ${NAS_PATH}/backups
   chmod +x ${NAS_PATH}/scripts/backup.sh
 "
@@ -41,6 +41,6 @@ echo "  Command: ${NAS_PATH}/scripts/backup.sh >> ${NAS_PATH}/backups/backup.log
 echo "  Schedule: Daily at 2:00 AM"
 
 echo "=== Smoke test ==="
-curl -sf ${NAS_URL}/health && echo " OK" || echo " FAILED"
+curl -sf "${NAS_URL}/health" && echo " OK" || echo " FAILED"
 
 echo "=== Deployed to ${NAS_URL}/ ==="

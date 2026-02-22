@@ -11,3 +11,4 @@ services:
       - "5050:8000"
     environment:
       - DATA_DIR=/app/data
+      - ENV=production
