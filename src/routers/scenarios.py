@@ -130,3 +130,21 @@ def compare_scenarios(loan_id: int, ids: str = Query(...), db: Session = Depends
             "schedule": json.loads(s.schedule_json) if s.schedule_json else [],
         })
     return results
+
+
+@router.get("/{scenario_id}")
+def get_scenario(loan_id: int, scenario_id: int, db: Session = Depends(get_db)):
+    scenario = db.query(Scenario).filter(Scenario.id == scenario_id, Scenario.loan_id == loan_id).first()
+    if not scenario:
+        raise HTTPException(status_code=404, detail="Scenario not found")
+    return {
+        "id": scenario.id,
+        "name": scenario.name,
+        "description": scenario.description,
+        "total_interest": scenario.total_interest,
+        "total_paid": scenario.total_paid,
+        "payoff_date": scenario.payoff_date,
+        "actual_num_repayments": scenario.actual_num_repayments,
+        "config": json.loads(scenario.config_json) if scenario.config_json else {},
+        "schedule": json.loads(scenario.schedule_json) if scenario.schedule_json else [],
+    }

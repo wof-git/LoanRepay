@@ -1049,6 +1049,178 @@ function _toggleScenario(id, checked) {
     document.getElementById('btn-compare').classList.toggle('hidden', state.selectedScenarios.size < 2);
 }
 
+async function _viewScenario(id) {
+    if (!state.currentLoanId) return;
+    try {
+        const data = await api(`/loans/${state.currentLoanId}/scenarios/${id}`);
+        const hasExtras = data.schedule.some(r => r.extra > 0);
+        const overrides = data.config?.whatif_overrides;
+
+        let overridesHtml = '';
+        if (overrides && Object.keys(overrides).length > 0) {
+            const parts = [];
+            if (overrides.fixed_repayment != null) parts.push(`Repayment: ${fmtMoney(overrides.fixed_repayment)}`);
+            if (overrides.additional_rate_changes?.length) {
+                overrides.additional_rate_changes.forEach(rc => {
+                    parts.push(`Rate: ${(rc.annual_rate * 100).toFixed(2)}% from ${fmtDate(rc.effective_date)}`);
+                });
+            }
+            if (overrides.additional_extra_repayments?.length) {
+                overrides.additional_extra_repayments.forEach(er => {
+                    parts.push(`Lump sum: ${fmtMoney(er.amount)} on ${fmtDate(er.payment_date)}`);
+                });
+            }
+            if (parts.length > 0) {
+                overridesHtml = `<div class="bg-indigo-50 border border-indigo-200 rounded p-2 mb-3">
+                    <p class="text-xs font-medium text-indigo-700 mb-1">What-If Adjustments:</p>
+                    <ul class="text-xs text-indigo-600 list-disc list-inside">${parts.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ul>
+                </div>`;
+            }
+        }
+
+        // Group schedule rows by year
+        const yearGroups = {};
+        data.schedule.forEach(row => {
+            const year = row.date.substring(0, 4);
+            if (!yearGroups[year]) yearGroups[year] = [];
+            yearGroups[year].push(row);
+        });
+
+        let tableHtml = '';
+        Object.keys(yearGroups).sort().forEach(year => {
+            const rows = yearGroups[year];
+            tableHtml += `<div class="mb-2">
+                <div class="flex justify-between items-center px-2 py-1 cursor-pointer hover:bg-gray-50"
+                     onclick="this.nextElementSibling.classList.toggle('hidden')">
+                    <span class="font-medium text-gray-700 text-sm">
+                        <span class="inline-block">&#9654;</span>
+                        ${year} <span class="text-gray-400 text-xs">(${rows.length} payments)</span>
+                    </span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm">
+                        <thead>
+                            <tr class="text-left text-xs text-gray-500 border-b">
+                                <th class="px-2 py-1">#</th>
+                                <th class="px-2 py-1">Date</th>
+                                <th class="px-2 py-1">Rate</th>
+                                <th class="px-2 py-1 text-right">Balance</th>
+                                <th class="px-2 py-1 text-right">Repayment</th>
+                                <th class="px-2 py-1 text-right">Interest</th>
+                                <th class="px-2 py-1 text-right">Principal</th>${hasExtras ? '<th class="px-2 py-1 text-right">Extra</th>' : ''}
+                                <th class="px-2 py-1 text-right">Closing</th>
+                            </tr>
+                        </thead>
+                        <tbody>`;
+            rows.forEach(row => {
+                tableHtml += `<tr>
+                    <td class="px-2 py-1 text-gray-500">${row.number}</td>
+                    <td class="px-2 py-1">${fmtDate(row.date)}</td>
+                    <td class="px-2 py-1 text-xs text-gray-400">${fmtPct(row.rate)}</td>
+                    <td class="px-2 py-1 text-right">${fmtMoney(row.opening_balance)}</td>
+                    <td class="px-2 py-1 text-right font-medium">${fmtMoney(row.principal + row.interest)}</td>
+                    <td class="px-2 py-1 text-right text-orange-600">${fmtMoney(row.interest)}</td>
+                    <td class="px-2 py-1 text-right text-green-700">${fmtMoney(row.principal)}</td>${hasExtras ? `<td class="px-2 py-1 text-right text-blue-600">${row.extra > 0 ? fmtMoney(row.extra) : '-'}</td>` : ''}
+                    <td class="px-2 py-1 text-right font-medium">${fmtMoney(row.closing_balance)}</td>
+                </tr>`;
+            });
+            tableHtml += `</tbody></table></div></div>`;
+        });
+
+        // Widen modal for schedule view
+        const modalContent = document.getElementById('modal-content');
+        const origMaxW = 'max-w-lg';
+        modalContent.classList.remove(origMaxW);
+        modalContent.classList.add('max-w-4xl');
+
+        showModal(`
+            <div class="flex justify-between items-start mb-3">
+                <div>
+                    <h2 class="text-lg font-bold">${escapeHtml(data.name)}</h2>
+                    ${data.description ? `<p class="text-sm text-gray-500">${escapeHtml(data.description)}</p>` : ''}
+                </div>
+                <button onclick="app.closeModal()" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+            </div>
+            ${overridesHtml}
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 text-sm">
+                <div class="bg-gray-50 rounded p-2"><span class="text-gray-500 text-xs">Interest</span><br><span class="font-medium">${fmtMoney(data.total_interest)}</span></div>
+                <div class="bg-gray-50 rounded p-2"><span class="text-gray-500 text-xs">Total Paid</span><br><span class="font-medium">${fmtMoney(data.total_paid)}</span></div>
+                <div class="bg-gray-50 rounded p-2"><span class="text-gray-500 text-xs">Payoff</span><br><span class="font-medium">${fmtDate(data.payoff_date)}</span></div>
+                <div class="bg-gray-50 rounded p-2"><span class="text-gray-500 text-xs">Payments</span><br><span class="font-medium">${data.actual_num_repayments}</span></div>
+            </div>
+            ${tableHtml}
+        `);
+
+        // Restore modal width when closed
+        const observer = new MutationObserver(() => {
+            if (document.getElementById('modal-overlay').classList.contains('hidden')) {
+                modalContent.classList.remove('max-w-4xl');
+                modalContent.classList.add(origMaxW);
+                observer.disconnect();
+            }
+        });
+        observer.observe(document.getElementById('modal-overlay'), { attributes: true, attributeFilter: ['class'] });
+
+    } catch (e) {
+        toast('Failed to load scenario: ' + e.message, 'error');
+    }
+}
+
+async function _loadScenario(id) {
+    if (!state.currentLoanId) return;
+    try {
+        const data = await api(`/loans/${state.currentLoanId}/scenarios/${id}`);
+        const overrides = data.config?.whatif_overrides;
+
+        // Switch to schedule tab
+        switchTab('schedule');
+
+        // Expand what-if panel if collapsed
+        if (!state.whatIfActive) {
+            toggleWhatIf();
+        }
+
+        // Reset form fields first
+        document.getElementById('whatif-rate-date').value = '';
+        document.getElementById('whatif-rate-value').value = '';
+        document.getElementById('whatif-extra-date').value = '';
+        document.getElementById('whatif-extra-amount').value = '';
+
+        if (!overrides || Object.keys(overrides).length === 0) {
+            resetWhatIf();
+            toast('This scenario has no what-if adjustments \u2014 showing base schedule.', 'info');
+            return;
+        }
+
+        // Populate repayment
+        if (overrides.fixed_repayment != null) {
+            document.getElementById('whatif-repayment').value = overrides.fixed_repayment;
+            document.getElementById('whatif-slider').value = overrides.fixed_repayment;
+        }
+
+        // Populate rate change (first one)
+        if (overrides.additional_rate_changes?.length) {
+            const rc = overrides.additional_rate_changes[0];
+            document.getElementById('whatif-rate-date').value = rc.effective_date;
+            document.getElementById('whatif-rate-value').value = (rc.annual_rate * 100).toFixed(2);
+        }
+
+        // Populate extra repayment (first one)
+        if (overrides.additional_extra_repayments?.length) {
+            const er = overrides.additional_extra_repayments[0];
+            document.getElementById('whatif-extra-date').value = er.payment_date;
+            document.getElementById('whatif-extra-amount').value = er.amount;
+        }
+
+        // Run what-if to compute results
+        await runWhatIf();
+        toast(`Loaded scenario: ${data.name}`, 'success');
+
+    } catch (e) {
+        toast('Failed to load scenario: ' + e.message, 'error');
+    }
+}
+
 async function _deleteScenario(id) {
     try {
         await api(`/loans/${state.currentLoanId}/scenarios/${id}`, { method: 'DELETE' });
@@ -1071,7 +1243,7 @@ window.app = {
     showAddRepaymentChange, deleteRepaymentChange,
     showAddExtra, deleteExtra,
     compareSelected, exportSchedule, _togglePaid, _calcAndFillRepayment,
-    _toggleScenario, _deleteScenario,
+    _toggleScenario, _viewScenario, _loadScenario, _deleteScenario,
 };
 
 // --- Init ---

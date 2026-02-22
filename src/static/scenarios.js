@@ -27,7 +27,11 @@ export async function renderScenarios(state, helpers, comparisonData = null) {
                             onchange="app._toggleScenario(${s.id}, this.checked)">
                         <h4 class="font-medium text-gray-800">${escapeHtml(s.name)}</h4>
                     </div>
-                    <button onclick="app._deleteScenario(${s.id})" class="text-red-400 hover:text-red-600 text-xs">Delete</button>
+                    <div class="flex gap-2">
+                        <button onclick="app._viewScenario(${s.id})" class="text-indigo-500 hover:text-indigo-700 text-xs">View</button>
+                        <button onclick="app._loadScenario(${s.id})" class="text-amber-500 hover:text-amber-700 text-xs">Load</button>
+                        <button onclick="app._deleteScenario(${s.id})" class="text-red-400 hover:text-red-600 text-xs">Delete</button>
+                    </div>
                 </div>
                 ${s.description ? `<p class="text-xs text-gray-500 mb-2">${escapeHtml(s.description)}</p>` : ''}
                 <div class="grid grid-cols-2 gap-2 text-sm">
