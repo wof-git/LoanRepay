@@ -58,34 +58,34 @@
         <!-- Dashboard Tab -->
         <div id="tab-dashboard" class="tab-content hidden">
             <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                <div class="bg-white rounded-xl shadow p-4">
+                <div class="bg-blue-50 border border-blue-200 rounded-xl shadow p-4">
                     <h3 class="text-sm text-gray-500">Remaining Balance</h3>
                     <p id="dash-balance" class="text-2xl font-bold text-gray-800">-</p>
                 </div>
-                <div class="bg-white rounded-xl shadow p-4">
+                <div class="bg-orange-50 border border-orange-200 rounded-xl shadow p-4">
                     <h3 class="text-sm text-gray-500">Total Interest</h3>
                     <p id="dash-interest" class="text-2xl font-bold text-orange-600">-</p>
                 </div>
-                <div class="bg-white rounded-xl shadow p-4">
+                <div class="bg-emerald-50 border border-emerald-200 rounded-xl shadow p-4">
                     <h3 class="text-sm text-gray-500">Payoff Date</h3>
                     <p id="dash-payoff" class="text-2xl font-bold text-green-600">-</p>
                 </div>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                <div class="bg-white rounded-xl shadow p-4">
+                <div class="bg-blue-50 border border-blue-200 rounded-xl shadow p-4">
                     <h3 class="text-sm text-gray-500 mb-2">Balance Over Time</h3>
                     <canvas id="chart-balance"></canvas>
                 </div>
-                <div class="bg-white rounded-xl shadow p-4">
+                <div class="bg-orange-50 border border-orange-200 rounded-xl shadow p-4">
                     <h3 class="text-sm text-gray-500 mb-2">Principal vs Interest</h3>
                     <canvas id="chart-breakdown"></canvas>
                 </div>
-                <div class="bg-white rounded-xl shadow p-4">
+                <div class="bg-emerald-50 border border-emerald-200 rounded-xl shadow p-4">
                     <h3 class="text-sm text-gray-500 mb-2">Cumulative Interest</h3>
                     <canvas id="chart-cumulative-interest"></canvas>
                 </div>
             </div>
-            <div class="bg-white rounded-xl shadow p-4">
+            <div class="bg-slate-50 border border-slate-200 rounded-xl shadow p-4">
                 <div class="flex items-center gap-2 mb-2">
                     <h3 id="loan-name-display" class="text-lg font-semibold text-gray-800"></h3>
                     <button onclick="app.startRenameLoan()" class="text-gray-400 hover:text-blue-600" title="Rename loan">
