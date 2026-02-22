@@ -598,7 +598,7 @@ async function _confirmApplyWhatIf(rep) {
     }
 }
 
-async function saveWhatIfScenario() {
+async function saveWhatIfScenario(onSaved = null) {
     const loan = state.loans.find(l => l.id === state.currentLoanId);
     const loanRepayment = loan?.fixed_repayment;
     const calcPmt = state.schedule?.rows[0]?.calculated_pmt;
@@ -663,6 +663,7 @@ async function saveWhatIfScenario() {
             });
             closeModal();
             toast('Scenario saved!', 'success');
+            onSaved?.();
         } catch (e) {
             toast('Failed: ' + e.message, 'error');
         }
@@ -1166,55 +1167,80 @@ async function _viewScenario(id) {
     }
 }
 
+async function _doLoadScenario(data) {
+    const overrides = data.config?.whatif_overrides;
+
+    // Switch to schedule tab
+    switchTab('schedule');
+
+    // Expand what-if panel if collapsed
+    if (!state.whatIfActive) {
+        toggleWhatIf();
+    }
+
+    // Reset form fields first
+    document.getElementById('whatif-rate-date').value = '';
+    document.getElementById('whatif-rate-value').value = '';
+    document.getElementById('whatif-extra-date').value = '';
+    document.getElementById('whatif-extra-amount').value = '';
+
+    if (!overrides || Object.keys(overrides).length === 0) {
+        resetWhatIf();
+        toast('This scenario has no what-if adjustments \u2014 showing base schedule.', 'info');
+        return;
+    }
+
+    // Populate repayment
+    if (overrides.fixed_repayment != null) {
+        document.getElementById('whatif-repayment').value = overrides.fixed_repayment;
+        document.getElementById('whatif-slider').value = overrides.fixed_repayment;
+    }
+
+    // Populate rate change (first one)
+    if (overrides.additional_rate_changes?.length) {
+        const rc = overrides.additional_rate_changes[0];
+        document.getElementById('whatif-rate-date').value = rc.effective_date;
+        document.getElementById('whatif-rate-value').value = (rc.annual_rate * 100).toFixed(2);
+    }
+
+    // Populate extra repayment (first one)
+    if (overrides.additional_extra_repayments?.length) {
+        const er = overrides.additional_extra_repayments[0];
+        document.getElementById('whatif-extra-date').value = er.payment_date;
+        document.getElementById('whatif-extra-amount').value = er.amount;
+    }
+
+    // Run what-if to compute results
+    await runWhatIf();
+    toast(`Loaded scenario: ${data.name}`, 'success');
+}
+
 async function _loadScenario(id) {
     if (!state.currentLoanId) return;
     try {
         const data = await api(`/loans/${state.currentLoanId}/scenarios/${id}`);
-        const overrides = data.config?.whatif_overrides;
 
-        // Switch to schedule tab
-        switchTab('schedule');
+        showModal(`
+            <h2 class="text-lg font-bold mb-2">Load Scenario: "${escapeHtml(data.name)}"</h2>
+            <p class="text-sm text-gray-600 mb-4">This will replace your current What-If Explorer settings.</p>
+            <div class="flex gap-2">
+                <button id="confirm-load-btn" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Load</button>
+                <button id="confirm-save-first-btn" class="bg-indigo-600 text-white px-4 py-1.5 rounded text-sm hover:bg-indigo-700">Save Current First</button>
+                <button id="confirm-cancel-btn" class="text-gray-500 px-4 py-1.5 text-sm hover:text-gray-700">Cancel</button>
+            </div>
+        `);
 
-        // Expand what-if panel if collapsed
-        if (!state.whatIfActive) {
-            toggleWhatIf();
-        }
-
-        // Reset form fields first
-        document.getElementById('whatif-rate-date').value = '';
-        document.getElementById('whatif-rate-value').value = '';
-        document.getElementById('whatif-extra-date').value = '';
-        document.getElementById('whatif-extra-amount').value = '';
-
-        if (!overrides || Object.keys(overrides).length === 0) {
-            resetWhatIf();
-            toast('This scenario has no what-if adjustments \u2014 showing base schedule.', 'info');
-            return;
-        }
-
-        // Populate repayment
-        if (overrides.fixed_repayment != null) {
-            document.getElementById('whatif-repayment').value = overrides.fixed_repayment;
-            document.getElementById('whatif-slider').value = overrides.fixed_repayment;
-        }
-
-        // Populate rate change (first one)
-        if (overrides.additional_rate_changes?.length) {
-            const rc = overrides.additional_rate_changes[0];
-            document.getElementById('whatif-rate-date').value = rc.effective_date;
-            document.getElementById('whatif-rate-value').value = (rc.annual_rate * 100).toFixed(2);
-        }
-
-        // Populate extra repayment (first one)
-        if (overrides.additional_extra_repayments?.length) {
-            const er = overrides.additional_extra_repayments[0];
-            document.getElementById('whatif-extra-date').value = er.payment_date;
-            document.getElementById('whatif-extra-amount').value = er.amount;
-        }
-
-        // Run what-if to compute results
-        await runWhatIf();
-        toast(`Loaded scenario: ${data.name}`, 'success');
+        document.getElementById('confirm-load-btn').addEventListener('click', () => {
+            closeModal();
+            _doLoadScenario(data);
+        });
+        document.getElementById('confirm-save-first-btn').addEventListener('click', () => {
+            closeModal();
+            saveWhatIfScenario(() => _doLoadScenario(data));
+        });
+        document.getElementById('confirm-cancel-btn').addEventListener('click', () => {
+            closeModal();
+        });
 
     } catch (e) {
         toast('Failed to load scenario: ' + e.message, 'error');
