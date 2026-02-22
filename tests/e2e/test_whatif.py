@@ -65,7 +65,7 @@ def test_whatif_save_as_scenario(page):
     page.fill("input#whatif-repayment", "700")
     page.wait_for_timeout(500)
 
-    page.click("text=Save as Scenario")
+    page.click("text=Save as New Scenario")
     page.fill("input[name=scenario_name]", "Pay $700")
     page.click("#modal-content button:has-text('Save')")
     page.wait_for_timeout(500)
@@ -73,4 +73,4 @@ def test_whatif_save_as_scenario(page):
     # Check scenarios tab
     page.click("button:has-text('Scenarios')")
     page.wait_for_timeout(500)
-    expect(page.locator("text=Pay $700")).to_be_visible()
+    expect(page.locator("#scenarios-list >> text=Pay $700")).to_be_visible()

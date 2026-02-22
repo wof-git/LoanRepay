@@ -23,7 +23,7 @@ def _create_loan_with_scenarios(page):
     page.wait_for_timeout(500)
     page.click("text=What-If Explorer")
     page.wait_for_timeout(300)
-    page.click("text=Save as Scenario")
+    page.click("text=Save as New Scenario")
     page.fill("input[name=scenario_name]", "Base")
     page.click("#modal-content button:has-text('Save')")
     page.wait_for_timeout(500)
@@ -31,7 +31,7 @@ def _create_loan_with_scenarios(page):
     # Save higher repayment scenario
     page.fill("input#whatif-repayment", "700")
     page.wait_for_timeout(500)
-    page.click("text=Save as Scenario")
+    page.click("text=Save as New Scenario")
     page.fill("input[name=scenario_name]", "Pay $700")
     page.click("#modal-content button:has-text('Save')")
     page.wait_for_timeout(500)
@@ -45,11 +45,12 @@ def test_compare_scenarios(page):
     page.click("button:has-text('Scenarios')")
     page.wait_for_timeout(500)
 
-    # Select both scenarios by clicking checkboxes
+    # Select both user-created scenarios by clicking checkboxes
+    # (Default + Base + Pay $700 = 3 total)
     checkboxes = page.locator("#scenarios-list input[type=checkbox]")
-    expect(checkboxes).to_have_count(2)
-    checkboxes.nth(0).check()
+    expect(checkboxes).to_have_count(3)
     checkboxes.nth(1).check()
+    checkboxes.nth(2).check()
     page.wait_for_timeout(300)
 
     # Compare

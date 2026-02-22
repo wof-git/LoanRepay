@@ -241,7 +241,12 @@ def test_list_scenarios(client, created_loan):
     client.post(f"/api/loans/{lid}/scenarios", json={"name": "S2"})
     res = client.get(f"/api/loans/{lid}/scenarios")
     assert res.status_code == 200
-    assert len(res.json()) == 2
+    scenarios = res.json()
+    # 2 user-created + 1 auto-created Default
+    assert len(scenarios) == 3
+    # Default should be first
+    assert scenarios[0]["is_default"] is True
+    assert scenarios[0]["name"] == "Default"
 
 
 def test_compare_scenarios(client, created_loan):
@@ -259,9 +264,35 @@ def test_delete_scenario(client, created_loan):
     s = client.post(f"/api/loans/{lid}/scenarios", json={"name": "To Delete"}).json()
     res = client.delete(f"/api/loans/{lid}/scenarios/{s['id']}")
     assert res.status_code == 200
-    # Verify gone
+    # Verify gone — only the auto-created Default remains
     scenarios = client.get(f"/api/loans/{lid}/scenarios").json()
-    assert len(scenarios) == 0
+    assert len(scenarios) == 1
+    assert scenarios[0]["is_default"] is True
+
+
+def test_delete_default_scenario_rejected(client, created_loan):
+    lid = created_loan["id"]
+    # Trigger Default creation by listing scenarios
+    scenarios = client.get(f"/api/loans/{lid}/scenarios").json()
+    default = next(s for s in scenarios if s["is_default"])
+    res = client.delete(f"/api/loans/{lid}/scenarios/{default['id']}")
+    assert res.status_code == 400
+    assert "Cannot delete" in res.json()["detail"]
+
+
+def test_update_scenario(client, created_loan):
+    lid = created_loan["id"]
+    s = client.post(f"/api/loans/{lid}/scenarios", json={"name": "Original"}).json()
+    # Rename
+    res = client.put(f"/api/loans/{lid}/scenarios/{s['id']}", json={"name": "Renamed"})
+    assert res.status_code == 200
+    assert res.json()["name"] == "Renamed"
+    # Update with what-if overrides
+    res = client.put(f"/api/loans/{lid}/scenarios/{s['id']}", json={
+        "whatif_fixed_repayment": 700.0,
+    })
+    assert res.status_code == 200
+    assert res.json()["total_interest"] > 0
 
 
 # --- Payoff Target ---

@@ -95,6 +95,7 @@ class Scenario(Base):
     actual_num_repayments = Column(Integer, nullable=False)
     config_json = Column(Text, nullable=False)
     schedule_json = Column(Text, nullable=False)
+    is_default = Column(Integer, server_default="0", nullable=False)
     created_at = Column(Text, server_default="(datetime('now'))")
 
     loan = relationship("Loan", back_populates="scenarios")

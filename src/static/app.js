@@ -14,6 +14,9 @@ const state = {
     whatIfAbort: null,
     scheduleAbort: null,
     selectedScenarios: new Set(),
+    activeScenarioId: null,
+    scenarioList: [],
+    scenarioDirty: false,
 };
 
 // --- API Helpers ---
@@ -171,6 +174,9 @@ function hideEmptyState() {
 
 async function selectLoan(id) {
     state.currentLoanId = id;
+    state.activeScenarioId = null;
+    state.scenarioList = [];
+    state.scenarioDirty = false;
     renderLoanSelector();
     hideEmptyState();
     // Abort any in-flight what-if and clear debounce
@@ -179,6 +185,7 @@ async function selectLoan(id) {
     // Abort previous schedule load
     if (state.scheduleAbort) state.scheduleAbort.abort();
     await loadSchedule();
+    await loadScenarioList();
     switchTab(state.currentTab);
 }
 
@@ -472,6 +479,7 @@ function onWhatIfChange(source) {
     } else if (source === 'repayment') {
         document.getElementById('whatif-slider').value = document.getElementById('whatif-repayment').value;
     }
+    state.scenarioDirty = true;
     clearTimeout(whatIfDebounce);
     whatIfDebounce = setTimeout(() => runWhatIf(), 300);
 }
@@ -659,13 +667,16 @@ async function saveWhatIfScenario() {
         e.preventDefault();
         const fd = new FormData(e.target);
         try {
-            await apiJson(`/loans/${state.currentLoanId}/scenarios`, 'POST', {
+            const newScenario = await apiJson(`/loans/${state.currentLoanId}/scenarios`, 'POST', {
                 name: fd.get('scenario_name'),
                 description: fd.get('description') || null,
                 ...whatIfParams,
             });
+            state.activeScenarioId = newScenario.id;
+            state.scenarioDirty = false;
             closeModal();
             toast('Scenario saved!', 'success');
+            await loadScenarioList();
         } catch (e) {
             toast('Failed: ' + e.message, 'error');
         }
@@ -1217,28 +1228,191 @@ async function _doLoadScenario(data) {
     toast(`Loaded scenario: ${data.name}`, 'success');
 }
 
-async function _loadScenario(id) {
+// --- Scenario Dropdown ---
+
+async function loadScenarioList() {
     if (!state.currentLoanId) return;
     try {
-        const data = await api(`/loans/${state.currentLoanId}/scenarios/${id}`);
-
-        // Auto-save current what-if settings if there are any changes
-        const { whatIfParams, includes } = _gatherWhatIfParams();
-        if (includes.length > 0) {
-            const timestamp = new Date().toLocaleString('en-AU', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-            await apiJson(`/loans/${state.currentLoanId}/scenarios`, 'POST', {
-                name: `Auto-save ${timestamp}`,
-                description: includes.join('; '),
-                ...whatIfParams,
-            });
-            toast('Current settings auto-saved', 'info');
+        state.scenarioList = await api(`/loans/${state.currentLoanId}/scenarios`);
+        renderScenarioDropdown();
+        // Auto-select Default scenario if none active
+        if (!state.activeScenarioId && state.scenarioList.length > 0) {
+            const defaultScenario = state.scenarioList.find(s => s.is_default);
+            state.activeScenarioId = defaultScenario ? defaultScenario.id : state.scenarioList[0].id;
+            renderScenarioDropdown();
         }
+    } catch (e) {
+        // Silently fail — dropdown stays as-is
+    }
+}
 
-        _doLoadScenario(data);
+function renderScenarioDropdown() {
+    const sel = document.getElementById('scenario-selector');
+    sel.innerHTML = '';
+    state.scenarioList.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = s.name;
+        if (s.id === state.activeScenarioId) opt.selected = true;
+        sel.appendChild(opt);
+    });
+    // Add "New Scenario" option
+    const newOpt = document.createElement('option');
+    newOpt.value = '__new__';
+    newOpt.textContent = '+ New Scenario';
+    sel.appendChild(newOpt);
 
+    // Show/hide delete button (hidden for Default)
+    const activeScenario = state.scenarioList.find(s => s.id === state.activeScenarioId);
+    const deleteBtn = document.getElementById('btn-delete-scenario-inline');
+    if (deleteBtn) {
+        deleteBtn.classList.toggle('hidden', !activeScenario || activeScenario.is_default);
+    }
+}
+
+async function switchScenario(newId) {
+    if (!state.currentLoanId) return;
+
+    // Auto-save current scenario if dirty
+    if (state.activeScenarioId && state.scenarioDirty) {
+        await autoSaveCurrentScenario();
+    }
+
+    state.activeScenarioId = newId;
+    state.scenarioDirty = false;
+    renderScenarioDropdown();
+
+    // Load the new scenario's overrides into what-if panel
+    try {
+        const data = await api(`/loans/${state.currentLoanId}/scenarios/${newId}`);
+        await _doLoadScenario(data);
     } catch (e) {
         toast('Failed to load scenario: ' + e.message, 'error');
     }
+}
+
+async function autoSaveCurrentScenario() {
+    if (!state.currentLoanId || !state.activeScenarioId) return;
+    const { whatIfParams } = _gatherWhatIfParams();
+    try {
+        await apiJson(`/loans/${state.currentLoanId}/scenarios/${state.activeScenarioId}`, 'PUT', whatIfParams);
+        state.scenarioDirty = false;
+    } catch (e) {
+        toast('Auto-save failed: ' + e.message, 'error');
+    }
+}
+
+async function saveActiveScenario() {
+    if (!state.currentLoanId || !state.activeScenarioId) return;
+    await autoSaveCurrentScenario();
+    toast('Scenario saved!', 'success');
+    await loadScenarioList();
+}
+
+async function createNewScenario() {
+    showModal(`
+        <h2 class="text-lg font-bold mb-4">New Scenario</h2>
+        <form id="new-scenario-form" class="space-y-3">
+            <div><label class="block text-sm text-gray-600">Scenario Name</label>
+                <input name="scenario_name" required class="w-full border rounded px-3 py-1.5 text-sm" placeholder="My scenario"></div>
+            <div><label class="block text-sm text-gray-600">Description (optional)</label>
+                <textarea name="description" class="w-full border rounded px-3 py-1.5 text-sm" rows="2"></textarea></div>
+            <div class="flex gap-2 pt-2">
+                <button type="submit" class="bg-indigo-600 text-white px-4 py-1.5 rounded text-sm hover:bg-indigo-700">Create</button>
+                <button type="button" onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
+            </div>
+        </form>
+    `);
+    document.getElementById('new-scenario-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        try {
+            const newScenario = await apiJson(`/loans/${state.currentLoanId}/scenarios`, 'POST', {
+                name: fd.get('scenario_name'),
+                description: fd.get('description') || null,
+            });
+            state.activeScenarioId = newScenario.id;
+            state.scenarioDirty = false;
+            closeModal();
+            toast('Scenario created!', 'success');
+            await loadScenarioList();
+        } catch (e) {
+            toast('Failed: ' + e.message, 'error');
+        }
+    });
+}
+
+async function renameActiveScenario() {
+    if (!state.activeScenarioId) return;
+    const active = state.scenarioList.find(s => s.id === state.activeScenarioId);
+    if (!active) return;
+
+    showModal(`
+        <h2 class="text-lg font-bold mb-4">Rename Scenario</h2>
+        <form id="rename-scenario-form" class="space-y-3">
+            <div><label class="block text-sm text-gray-600">Scenario Name</label>
+                <input name="scenario_name" required value="${escapeHtml(active.name)}" class="w-full border rounded px-3 py-1.5 text-sm"></div>
+            <div class="flex gap-2 pt-2">
+                <button type="submit" class="bg-indigo-600 text-white px-4 py-1.5 rounded text-sm hover:bg-indigo-700">Rename</button>
+                <button type="button" onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
+            </div>
+        </form>
+    `);
+    document.getElementById('rename-scenario-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const fd = new FormData(e.target);
+        try {
+            await apiJson(`/loans/${state.currentLoanId}/scenarios/${state.activeScenarioId}`, 'PUT', {
+                name: fd.get('scenario_name'),
+            });
+            closeModal();
+            toast('Scenario renamed!', 'success');
+            await loadScenarioList();
+        } catch (e) {
+            toast('Failed: ' + e.message, 'error');
+        }
+    });
+}
+
+async function deleteActiveScenario() {
+    if (!state.activeScenarioId) return;
+    const active = state.scenarioList.find(s => s.id === state.activeScenarioId);
+    if (!active || active.is_default) return;
+
+    showModal(`
+        <h2 class="text-lg font-bold mb-4 text-red-600">Delete Scenario</h2>
+        <p class="text-sm text-gray-600 mb-4">Delete scenario "${escapeHtml(active.name)}"? This cannot be undone.</p>
+        <div class="flex gap-2">
+            <button onclick="app._confirmDeleteActiveScenario()" class="bg-red-600 text-white px-4 py-1.5 rounded text-sm hover:bg-red-700">Confirm Delete</button>
+            <button onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
+        </div>
+    `);
+}
+
+async function _confirmDeleteActiveScenario() {
+    try {
+        await api(`/loans/${state.currentLoanId}/scenarios/${state.activeScenarioId}`, { method: 'DELETE' });
+        state.selectedScenarios.delete(state.activeScenarioId);
+        closeModal();
+        toast('Scenario deleted', 'success');
+        // Switch to Default
+        const defaultScenario = state.scenarioList.find(s => s.is_default);
+        state.activeScenarioId = defaultScenario ? defaultScenario.id : null;
+        state.scenarioDirty = false;
+        await loadScenarioList();
+        if (state.activeScenarioId) {
+            const data = await api(`/loans/${state.currentLoanId}/scenarios/${state.activeScenarioId}`);
+            await _doLoadScenario(data);
+        }
+    } catch (e) {
+        toast('Failed: ' + e.message, 'error');
+    }
+}
+
+async function _loadScenario(id) {
+    if (!state.currentLoanId) return;
+    await switchScenario(id);
+    switchTab('schedule');
 }
 
 async function _deleteScenario(id) {
@@ -1264,9 +1438,23 @@ window.app = {
     showAddExtra, deleteExtra,
     compareSelected, exportSchedule, _togglePaid, _calcAndFillRepayment,
     _toggleScenario, _viewScenario, _loadScenario, _deleteScenario,
+    saveActiveScenario, renameActiveScenario, deleteActiveScenario,
+    _confirmDeleteActiveScenario,
 };
 
 // --- Init ---
+
+// Bind scenario dropdown
+document.getElementById('scenario-selector').addEventListener('change', (e) => {
+    const val = e.target.value;
+    if (val === '__new__') {
+        createNewScenario();
+        // Reset dropdown to current selection while modal is open
+        renderScenarioDropdown();
+    } else if (val) {
+        switchScenario(parseInt(val, 10));
+    }
+});
 
 // Bind what-if inputs via addEventListener (Safari ignores inline oninput on range inputs with custom CSS)
 document.getElementById('whatif-slider').addEventListener('input', () => onWhatIfChange('slider'));

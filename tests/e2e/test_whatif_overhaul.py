@@ -154,7 +154,7 @@ def test_save_scenario_shows_includes(page):
     _open_whatif(page)
     page.fill("input#whatif-repayment", "700")
     page.wait_for_timeout(600)
-    page.click("text=Save as Scenario")
+    page.click("text=Save as New Scenario")
     page.wait_for_timeout(300)
     # Modal should show "Includes:" with repayment
     expect(page.locator("#modal-content")).to_contain_text("Includes")
@@ -168,7 +168,7 @@ def test_save_scenario_auto_populates_description(page):
     _open_whatif(page)
     page.fill("input#whatif-repayment", "700")
     page.wait_for_timeout(600)
-    page.click("text=Save as Scenario")
+    page.click("text=Save as New Scenario")
     page.wait_for_timeout(300)
     desc = page.locator("textarea[name=description]")
     expect(desc).not_to_be_empty()
@@ -180,7 +180,7 @@ def test_save_scenario_with_whatif_repayment_persists(page):
     _open_whatif(page)
     page.fill("input#whatif-repayment", "800")
     page.wait_for_timeout(600)
-    page.click("text=Save as Scenario")
+    page.click("text=Save as New Scenario")
     page.wait_for_timeout(300)
     page.fill("input[name=scenario_name]", "Pay $800")
     page.click("#modal-content button:has-text('Save')")
@@ -188,7 +188,7 @@ def test_save_scenario_with_whatif_repayment_persists(page):
     # Check scenarios tab
     page.click("button:has-text('Scenarios')")
     page.wait_for_timeout(500)
-    expect(page.locator("text=Pay $800")).to_be_visible()
+    expect(page.locator("#scenarios-list >> text=Pay $800")).to_be_visible()
 
 
 def test_save_scenario_with_rate_change(page):
@@ -198,7 +198,7 @@ def test_save_scenario_with_rate_change(page):
     page.fill("input#whatif-rate-date", "2026-09-01")
     page.fill("input#whatif-rate-value", "7")
     page.wait_for_timeout(600)
-    page.click("text=Save as Scenario")
+    page.click("text=Save as New Scenario")
     page.wait_for_timeout(300)
     # Modal should mention rate
     expect(page.locator("#modal-content")).to_contain_text("Rate")
@@ -207,7 +207,7 @@ def test_save_scenario_with_rate_change(page):
     page.wait_for_timeout(500)
     page.click("button:has-text('Scenarios')")
     page.wait_for_timeout(500)
-    expect(page.locator("text=Rate Hike")).to_be_visible()
+    expect(page.locator("#scenarios-list >> text=Rate Hike")).to_be_visible()
 
 
 def test_save_scenario_with_lump_sum(page):
@@ -217,7 +217,7 @@ def test_save_scenario_with_lump_sum(page):
     page.fill("input#whatif-extra-date", "2026-06-01")
     page.fill("input#whatif-extra-amount", "5000")
     page.wait_for_timeout(600)
-    page.click("text=Save as Scenario")
+    page.click("text=Save as New Scenario")
     page.wait_for_timeout(300)
     # Modal should mention lump sum
     expect(page.locator("#modal-content")).to_contain_text("Lump sum")
@@ -226,14 +226,14 @@ def test_save_scenario_with_lump_sum(page):
     page.wait_for_timeout(500)
     page.click("button:has-text('Scenarios')")
     page.wait_for_timeout(500)
-    expect(page.locator("text=Tax Refund")).to_be_visible()
+    expect(page.locator("#scenarios-list >> text=Tax Refund")).to_be_visible()
 
 
 def test_save_no_changes_shows_base_state_message(page):
     """Save without adjustments shows 'no adjustments' message."""
     _create_loan(page)
     _open_whatif(page)
-    page.click("text=Save as Scenario")
+    page.click("text=Save as New Scenario")
     page.wait_for_timeout(300)
     expect(page.locator("#modal-content")).to_contain_text("No what-if adjustments")
 
@@ -244,7 +244,7 @@ def test_two_whatif_scenarios_have_different_interest(page):
     _open_whatif(page)
 
     # Save base scenario
-    page.click("text=Save as Scenario")
+    page.click("text=Save as New Scenario")
     page.wait_for_timeout(300)
     page.fill("input[name=scenario_name]", "Base")
     page.click("#modal-content button:has-text('Save')")
@@ -253,7 +253,7 @@ def test_two_whatif_scenarios_have_different_interest(page):
     # Save higher repayment scenario
     page.fill("input#whatif-repayment", "800")
     page.wait_for_timeout(600)
-    page.click("text=Save as Scenario")
+    page.click("text=Save as New Scenario")
     page.wait_for_timeout(300)
     page.fill("input[name=scenario_name]", "Pay $800")
     page.click("#modal-content button:has-text('Save')")
@@ -263,14 +263,15 @@ def test_two_whatif_scenarios_have_different_interest(page):
     page.click("button:has-text('Scenarios')")
     page.wait_for_timeout(500)
     cards = page.locator("#scenarios-list > div")
-    expect(cards).to_have_count(2)
-    # Verify both scenario names appear
-    expect(page.locator("text=Base")).to_be_visible()
-    expect(page.locator("text=Pay $800")).to_be_visible()
-    # Select both and compare by clicking checkboxes
+    # Default + Base + Pay $800 = 3
+    expect(cards).to_have_count(3)
+    # Verify both scenario names appear in scenario cards
+    expect(page.locator("#scenarios-list h4 >> text=Base")).to_be_visible()
+    expect(page.locator("#scenarios-list h4 >> text=Pay $800")).to_be_visible()
+    # Select user-created scenarios and compare
     checkboxes = page.locator("#scenarios-list input[type=checkbox]")
-    checkboxes.nth(0).check()
     checkboxes.nth(1).check()
+    checkboxes.nth(2).check()
     page.wait_for_timeout(300)
     page.click("button:has-text('Compare Selected')")
     page.wait_for_timeout(1000)
@@ -363,7 +364,7 @@ def test_button_order(page):
     _create_loan(page)
     _open_whatif(page)
     buttons = page.locator("#whatif-panel .flex.flex-wrap.gap-2 button")
-    expect(buttons.nth(0)).to_contain_text("Save as Scenario")
+    expect(buttons.nth(0)).to_contain_text("Save as New Scenario")
     expect(buttons.nth(1)).to_contain_text("Apply Repayment to Loan")
     expect(buttons.nth(2)).to_contain_text("Reset")
 

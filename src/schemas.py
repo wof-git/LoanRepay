@@ -183,6 +183,14 @@ class ScenarioCreate(BaseModel):
     whatif_additional_extra_repayments: Optional[list[ExtraRepaymentCreate]] = None
 
 
+class ScenarioUpdate(BaseModel):
+    name: Optional[str] = Field(default=None, max_length=255)
+    description: Optional[str] = Field(default=None, max_length=1000)
+    whatif_fixed_repayment: Optional[float] = None
+    whatif_additional_rate_changes: Optional[list[RateChangeCreate]] = None
+    whatif_additional_extra_repayments: Optional[list[ExtraRepaymentCreate]] = None
+
+
 class ScenarioResponse(BaseModel):
     id: int
     loan_id: int
@@ -192,6 +200,7 @@ class ScenarioResponse(BaseModel):
     total_paid: float
     payoff_date: str
     actual_num_repayments: int
+    is_default: bool = False
     created_at: Optional[str]
 
     model_config = {"from_attributes": True}

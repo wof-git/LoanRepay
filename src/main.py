@@ -21,6 +21,13 @@ def _run_migrations(eng):
             conn.commit()
             logger.info("Migration: added adjusted_repayment column to rate_changes")
 
+        result = conn.exec_driver_sql("PRAGMA table_info(scenarios)")
+        columns = {row[1] for row in result}
+        if "is_default" not in columns:
+            conn.exec_driver_sql("ALTER TABLE scenarios ADD COLUMN is_default INTEGER NOT NULL DEFAULT 0")
+            conn.commit()
+            logger.info("Migration: added is_default column to scenarios")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
