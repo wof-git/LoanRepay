@@ -1,7 +1,17 @@
 #!/bin/bash
 set -e
-NAS_HOST="WOFNASadmin@wofnas.tail6c8ab5.ts.net"
-NAS_PATH="/volume3/Wof/repo/LoanRepay"
+
+# Source .env from project root if it exists
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ENV_FILE="${SCRIPT_DIR}/../.env"
+if [ -f "${ENV_FILE}" ]; then
+    # shellcheck disable=SC1090
+    source "${ENV_FILE}"
+fi
+
+NAS_HOST="${LOANREPAY_NAS_HOST:?Set LOANREPAY_NAS_HOST (e.g. user@host)}"
+NAS_PATH="${LOANREPAY_NAS_PATH:?Set LOANREPAY_NAS_PATH (e.g. /volume3/Wof/repo/LoanRepay)}"
+NAS_URL="${LOANREPAY_NAS_URL:?Set LOANREPAY_NAS_URL (e.g. http://host:5050)}"
 
 echo "=== Pulling latest from Gitea on NAS ==="
 ssh ${NAS_HOST} "
@@ -31,6 +41,6 @@ echo "  Command: ${NAS_PATH}/scripts/backup.sh >> ${NAS_PATH}/backups/backup.log
 echo "  Schedule: Daily at 2:00 AM"
 
 echo "=== Smoke test ==="
-curl -sf http://wofnas.tail6c8ab5.ts.net:5050/health && echo " OK" || echo " FAILED"
+curl -sf ${NAS_URL}/health && echo " OK" || echo " FAILED"
 
-echo "=== Deployed to http://wofnas.tail6c8ab5.ts.net:5050/ ==="
+echo "=== Deployed to ${NAS_URL}/ ==="

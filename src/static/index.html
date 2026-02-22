@@ -16,7 +16,7 @@
                 <select id="loan-selector" class="border rounded-lg px-3 py-1.5 text-xs sm:text-sm bg-white">
                     <option value="">Select a loan...</option>
                 </select>
-                <button onclick="app.showCreateLoan()" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm hover:bg-blue-700">+ New</button>
+                <button data-action="showCreateLoan" class="bg-blue-600 text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm hover:bg-blue-700">+ New</button>
             </div>
         </div>
     </nav>
@@ -24,9 +24,9 @@
     <!-- Tab Navigation -->
     <div id="tab-nav" class="max-w-7xl mx-auto px-4 pt-3 hidden">
         <div class="flex gap-1 border-b">
-            <button class="tab-btn px-4 py-2 text-sm font-medium rounded-t-lg" data-tab="dashboard" onclick="app.switchTab('dashboard')">Dashboard</button>
-            <button class="tab-btn px-4 py-2 text-sm font-medium rounded-t-lg" data-tab="schedule" onclick="app.switchTab('schedule')">Schedule</button>
-            <button class="tab-btn px-4 py-2 text-sm font-medium rounded-t-lg" data-tab="scenarios" onclick="app.switchTab('scenarios')">Scenarios</button>
+            <button class="tab-btn px-4 py-2 text-sm font-medium rounded-t-lg" data-tab="dashboard" data-action="switchTab">Dashboard</button>
+            <button class="tab-btn px-4 py-2 text-sm font-medium rounded-t-lg" data-tab="schedule" data-action="switchTab">Schedule</button>
+            <button class="tab-btn px-4 py-2 text-sm font-medium rounded-t-lg" data-tab="scenarios" data-action="switchTab">Scenarios</button>
         </div>
     </div>
 
@@ -52,7 +52,7 @@
             <div class="text-6xl mb-4">💰</div>
             <h2 class="text-2xl font-bold text-gray-700 mb-2">No loans yet</h2>
             <p class="text-gray-500 mb-6">Create your first loan to get started</p>
-            <button onclick="app.showCreateLoan()" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">Create your first loan</button>
+            <button data-action="showCreateLoan" class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700">Create your first loan</button>
         </div>
 
         <!-- Dashboard Tab -->
@@ -88,19 +88,19 @@
             <div class="bg-slate-50 border border-slate-200 rounded-xl shadow p-4">
                 <div class="flex items-center gap-2 mb-2">
                     <h3 id="loan-name-display" class="text-lg font-semibold text-gray-800"></h3>
-                    <button onclick="app.startRenameLoan()" class="text-gray-400 hover:text-blue-600" title="Rename loan">
+                    <button id="btn-rename-loan" data-action="startRenameLoan" class="text-gray-400 hover:text-blue-600" title="Rename loan">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
                     </button>
                     <form id="loan-rename-form" class="hidden flex items-center gap-2">
                         <input id="loan-rename-input" class="border rounded px-2 py-1 text-sm font-semibold" type="text">
                         <button type="submit" class="text-green-600 hover:text-green-800 text-xs font-medium">Save</button>
-                        <button type="button" onclick="app.cancelRenameLoan()" class="text-gray-400 hover:text-gray-600 text-xs">Cancel</button>
+                        <button type="button" data-action="cancelRenameLoan" class="text-gray-400 hover:text-gray-600 text-xs">Cancel</button>
                     </form>
                 </div>
                 <div id="loan-details" class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm"></div>
                 <div class="mt-4 flex gap-2">
-                    <button onclick="app.showEditLoan()" class="text-sm text-blue-600 hover:underline">Edit Loan</button>
-                    <button onclick="app.confirmDeleteLoan()" class="text-sm text-red-600 hover:underline">Delete Loan</button>
+                    <button data-action="showEditLoan" class="text-sm text-blue-600 hover:underline">Edit Loan</button>
+                    <button data-action="confirmDeleteLoan" class="text-sm text-red-600 hover:underline">Delete Loan</button>
                 </div>
             </div>
         </div>
@@ -113,11 +113,11 @@
                 <select id="scenario-selector" class="border rounded-lg px-3 py-1.5 text-sm bg-white min-w-[200px]">
                     <option value="">Loading...</option>
                 </select>
-                <button id="btn-save-scenario" onclick="app.saveActiveScenario()"
+                <button id="btn-save-scenario" data-action="saveActiveScenario"
                     class="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded hover:bg-indigo-700">Save</button>
-                <button id="btn-rename-scenario" onclick="app.renameActiveScenario()"
+                <button id="btn-rename-scenario" data-action="renameActiveScenario"
                     class="text-xs text-gray-500 hover:text-gray-700">Rename</button>
-                <button id="btn-delete-scenario-inline" onclick="app.deleteActiveScenario()"
+                <button id="btn-delete-scenario-inline" data-action="deleteActiveScenario"
                     class="text-xs text-red-400 hover:text-red-600 hidden">Delete</button>
             </div>
 
@@ -126,21 +126,21 @@
                 <div class="bg-violet-50 border border-violet-200 rounded-xl shadow p-4">
                     <div class="flex justify-between items-center mb-2">
                         <h3 class="text-sm font-medium text-violet-800">Rate Changes</h3>
-                        <button onclick="app.showAddRateChange()" class="text-xs bg-violet-200 text-violet-800 px-2 py-1 rounded hover:bg-violet-300">+ Add</button>
+                        <button data-action="showAddRateChange" class="text-xs bg-violet-200 text-violet-800 px-2 py-1 rounded hover:bg-violet-300">+ Add</button>
                     </div>
                     <div id="rate-changes-list" class="text-sm space-y-1"></div>
                 </div>
                 <div class="bg-sky-50 border border-sky-200 rounded-xl shadow p-4">
                     <div class="flex justify-between items-center mb-2">
                         <h3 class="text-sm font-medium text-sky-800">Repayment Changes</h3>
-                        <button onclick="app.showAddRepaymentChange()" class="text-xs bg-sky-200 text-sky-800 px-2 py-1 rounded hover:bg-sky-300">+ Add</button>
+                        <button data-action="showAddRepaymentChange" class="text-xs bg-sky-200 text-sky-800 px-2 py-1 rounded hover:bg-sky-300">+ Add</button>
                     </div>
                     <div id="repayment-changes-list" class="text-sm space-y-1"></div>
                 </div>
                 <div class="bg-emerald-50 border border-emerald-200 rounded-xl shadow p-4">
                     <div class="flex justify-between items-center mb-2">
                         <h3 class="text-sm font-medium text-emerald-800">Extra Repayments</h3>
-                        <button onclick="app.showAddExtra()" class="text-xs bg-emerald-200 text-emerald-800 px-2 py-1 rounded hover:bg-emerald-300">+ Add</button>
+                        <button data-action="showAddExtra" class="text-xs bg-emerald-200 text-emerald-800 px-2 py-1 rounded hover:bg-emerald-300">+ Add</button>
                     </div>
                     <div id="extras-list" class="text-sm space-y-1"></div>
                 </div>
@@ -148,7 +148,7 @@
 
             <!-- What-If Explorer -->
             <div class="bg-indigo-50 rounded-xl shadow p-4 mb-4">
-                <div class="flex justify-between items-center cursor-pointer" onclick="app.toggleWhatIf()">
+                <div class="flex justify-between items-center cursor-pointer" data-action="toggleWhatIf">
                     <h3 class="text-sm font-medium text-indigo-700">What-If Explorer</h3>
                     <span id="whatif-toggle" class="text-indigo-500 text-xs">&#9654; Expand</span>
                 </div>
@@ -185,7 +185,7 @@
                         <label class="block text-xs text-gray-600 mb-1">Target Payoff Date</label>
                         <div class="flex gap-2 items-center">
                             <input type="date" id="whatif-target-date" class="border rounded px-2 py-1 text-sm">
-                            <button onclick="app.calcPayoffTarget()" class="text-xs bg-indigo-600 text-white px-3 py-1 rounded hover:bg-indigo-700">Calculate</button>
+                            <button data-action="calcPayoffTarget" class="text-xs bg-indigo-600 text-white px-3 py-1 rounded hover:bg-indigo-700">Calculate</button>
                             <span id="payoff-result" class="text-sm text-indigo-700"></span>
                         </div>
                     </div>
@@ -209,9 +209,9 @@
                         </div>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <button onclick="app.saveWhatIfScenario()" class="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded hover:bg-indigo-700">Save as New Scenario</button>
-                        <button onclick="app.applyWhatIf()" class="text-xs bg-amber-500 text-white px-3 py-1.5 rounded hover:bg-amber-600">Apply Repayment to Loan</button>
-                        <button onclick="app.resetWhatIf()" class="text-xs text-gray-500 hover:text-gray-700">Reset</button>
+                        <button data-action="saveWhatIfScenario" class="text-xs bg-indigo-600 text-white px-3 py-1.5 rounded hover:bg-indigo-700">Save as New Scenario</button>
+                        <button data-action="applyWhatIf" class="text-xs bg-amber-500 text-white px-3 py-1.5 rounded hover:bg-amber-600">Apply Repayment to Loan</button>
+                        <button data-action="resetWhatIf" class="text-xs text-gray-500 hover:text-gray-700">Reset</button>
                     </div>
                     <p class="text-xs text-gray-400">Saved scenarios can be compared in the Scenarios tab.</p>
                 </div>
@@ -227,7 +227,7 @@
         <div id="tab-scenarios" class="tab-content hidden">
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-medium text-gray-700">Saved Scenarios</h3>
-                <button onclick="app.compareSelected()" id="btn-compare" class="hidden bg-indigo-600 text-white px-4 py-1.5 rounded-lg text-sm hover:bg-indigo-700">Compare Selected</button>
+                <button data-action="compareSelected" id="btn-compare" class="hidden bg-indigo-600 text-white px-4 py-1.5 rounded-lg text-sm hover:bg-indigo-700">Compare Selected</button>
             </div>
             <div id="scenarios-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
             <div id="comparison-view" class="hidden mt-6">

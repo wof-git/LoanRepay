@@ -26,6 +26,8 @@ async def import_spreadsheet(file: UploadFile = File(...), db: Session = Depends
         contents = await file.read(MAX_UPLOAD_BYTES + 1)
         if len(contents) > MAX_UPLOAD_BYTES:
             raise HTTPException(status_code=413, detail=f"File too large (max {MAX_UPLOAD_BYTES // 1024 // 1024} MB)")
+        if contents[:4] != b'PK\x03\x04':
+            raise HTTPException(status_code=422, detail="Invalid file: not a valid .xlsx archive")
         wb = openpyxl.load_workbook(io.BytesIO(contents), data_only=True)
         ws = wb.active
 

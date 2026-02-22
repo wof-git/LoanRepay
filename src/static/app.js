@@ -279,12 +279,12 @@ function showCreateLoan() {
                 <div><label class="block text-sm text-gray-600">Fixed Repayment ($)</label>
                     <div class="flex gap-1">
                         <input name="fixed_repayment" type="number" step="0.01" class="w-full border rounded px-3 py-1.5 text-sm" placeholder="Auto-calc">
-                        <button type="button" onclick="app._calcAndFillRepayment('create-loan-form')" class="bg-gray-200 hover:bg-gray-300 px-2 py-1.5 rounded text-xs font-medium whitespace-nowrap" title="Calculate PMT from principal, rate, frequency and term">Calc</button>
+                        <button type="button" data-action="_calcAndFillRepayment" data-form-id="create-loan-form" class="bg-gray-200 hover:bg-gray-300 px-2 py-1.5 rounded text-xs font-medium whitespace-nowrap" title="Calculate PMT from principal, rate, frequency and term">Calc</button>
                     </div></div>
             </div>
             <div class="flex gap-2 pt-2">
                 <button type="submit" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Create Loan</button>
-                <button type="button" onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
+                <button type="button" data-action="closeModal" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
             </div>
         </form>
     `);
@@ -344,12 +344,12 @@ function showEditLoan() {
                 <div><label class="block text-sm text-gray-600">Fixed Repayment ($)</label>
                     <div class="flex gap-1">
                         <input name="fixed_repayment" type="number" step="0.01" value="${loan.fixed_repayment || ''}" class="w-full border rounded px-3 py-1.5 text-sm">
-                        <button type="button" onclick="app._calcAndFillRepayment('edit-loan-form')" class="bg-gray-200 hover:bg-gray-300 px-2 py-1.5 rounded text-xs font-medium whitespace-nowrap" title="Calculate PMT from principal, rate, frequency and term">Calc</button>
+                        <button type="button" data-action="_calcAndFillRepayment" data-form-id="edit-loan-form" class="bg-gray-200 hover:bg-gray-300 px-2 py-1.5 rounded text-xs font-medium whitespace-nowrap" title="Calculate PMT from principal, rate, frequency and term">Calc</button>
                     </div></div>
             </div>
             <div class="flex gap-2 pt-2">
                 <button type="submit" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Save</button>
-                <button type="button" onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
+                <button type="button" data-action="closeModal" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
             </div>
         </form>
     `);
@@ -384,8 +384,8 @@ function confirmDeleteLoan() {
         <h2 class="text-lg font-bold mb-4 text-red-600">Delete Loan</h2>
         <p class="text-sm text-gray-600 mb-4">This will permanently delete this loan and all its rate changes, extra repayments, paid repayments, and scenarios. This cannot be undone.</p>
         <div class="flex gap-2">
-            <button onclick="app.deleteLoan()" class="bg-red-600 text-white px-4 py-1.5 rounded text-sm hover:bg-red-700">Confirm Delete</button>
-            <button onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
+            <button data-action="deleteLoan" class="bg-red-600 text-white px-4 py-1.5 rounded text-sm hover:bg-red-700">Confirm Delete</button>
+            <button data-action="closeModal" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
         </div>
     `);
 }
@@ -411,7 +411,7 @@ function startRenameLoan() {
     const loan = state.loans.find(l => l.id === state.currentLoanId);
     if (!loan) return;
     document.getElementById('loan-name-display').classList.add('hidden');
-    document.querySelector('[onclick="app.startRenameLoan()"]').classList.add('hidden');
+    document.getElementById('btn-rename-loan').classList.add('hidden');
     const form = document.getElementById('loan-rename-form');
     const input = document.getElementById('loan-rename-input');
     form.classList.remove('hidden');
@@ -422,7 +422,7 @@ function startRenameLoan() {
 
 function cancelRenameLoan() {
     document.getElementById('loan-name-display').classList.remove('hidden');
-    document.querySelector('[onclick="app.startRenameLoan()"]').classList.remove('hidden');
+    document.getElementById('btn-rename-loan').classList.remove('hidden');
     document.getElementById('loan-rename-form').classList.add('hidden');
 }
 
@@ -587,8 +587,8 @@ function applyWhatIf() {
         <p class="text-sm mb-3"><span class="text-gray-500">New:</span> <strong>${fmtMoney(rep)}</strong></p>
         <p class="text-xs text-amber-600 mb-4">Only the repayment amount is applied. Rate changes and lump sums from the what-if panel are not saved to the loan.</p>
         <div class="flex gap-2">
-            <button onclick="app._confirmApplyWhatIf(${rep})" class="bg-amber-500 text-white px-4 py-1.5 rounded text-sm hover:bg-amber-600">Confirm</button>
-            <button onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
+            <button data-action="_confirmApplyWhatIf" data-amount="${rep}" class="bg-amber-500 text-white px-4 py-1.5 rounded text-sm hover:bg-amber-600">Confirm</button>
+            <button data-action="closeModal" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
         </div>
     `);
 }
@@ -659,7 +659,7 @@ async function saveWhatIfScenario() {
                 <textarea name="description" class="w-full border rounded px-3 py-1.5 text-sm" rows="2">${autoDesc}</textarea></div>
             <div class="flex gap-2 pt-2">
                 <button type="submit" class="bg-indigo-600 text-white px-4 py-1.5 rounded text-sm hover:bg-indigo-700">Save</button>
-                <button type="button" onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
+                <button type="button" data-action="closeModal" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
             </div>
         </form>
     `);
@@ -730,7 +730,7 @@ function showAddRateChange() {
             <div id="rate-preview-area"></div>
             <div id="rate-form-buttons" class="flex gap-2 pt-2">
                 <button type="button" id="rate-preview-btn" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Preview Impact</button>
-                <button type="button" onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
+                <button type="button" data-action="closeModal" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
             </div>
         </form>
     `);
@@ -776,7 +776,7 @@ function _showRatePreviewStep(preview, rateDate, newRate, note) {
         `;
         buttons.innerHTML = `
             <button type="button" id="rate-confirm-btn" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Confirm & Save</button>
-            <button type="button" onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
+            <button type="button" data-action="closeModal" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
         `;
         document.getElementById('rate-confirm-btn').addEventListener('click', () =>
             _saveRateChange(rateDate, newRate, note, null)
@@ -818,7 +818,7 @@ function _showRatePreviewStep(preview, rateDate, newRate, note) {
 
     buttons.innerHTML = `
         <button type="button" id="rate-confirm-btn" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Confirm & Save</button>
-        <button type="button" onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
+        <button type="button" data-action="closeModal" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
     `;
 
     document.getElementById('rate-confirm-btn').addEventListener('click', () => {
@@ -877,7 +877,7 @@ function showAddRepaymentChange() {
             <div id="repayment-preview-area"></div>
             <div id="repayment-form-buttons" class="flex gap-2 pt-2">
                 <button type="button" id="repayment-preview-btn" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Preview Impact</button>
-                <button type="button" onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
+                <button type="button" data-action="closeModal" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
             </div>
         </form>
     `);
@@ -933,7 +933,7 @@ function _showRepaymentPreviewStep(preview, effectiveDate, amount, note) {
 
     buttons.innerHTML = `
         <button type="button" id="repayment-confirm-btn" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Confirm & Save</button>
-        <button type="button" onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
+        <button type="button" data-action="closeModal" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
     `;
 
     document.getElementById('repayment-confirm-btn').addEventListener('click', () =>
@@ -982,7 +982,7 @@ function showAddExtra() {
                 <input name="note" class="w-full border rounded px-3 py-1.5 text-sm" placeholder="Tax refund"></div>
             <div class="flex gap-2 pt-2">
                 <button type="submit" class="bg-blue-600 text-white px-4 py-1.5 rounded text-sm hover:bg-blue-700">Save</button>
-                <button type="button" onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
+                <button type="button" data-action="closeModal" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
             </div>
         </form>
     `);
@@ -1105,7 +1105,7 @@ async function _viewScenario(id) {
             const rows = yearGroups[year];
             tableHtml += `<div class="mb-2">
                 <div class="flex justify-between items-center px-2 py-1 cursor-pointer hover:bg-gray-50"
-                     onclick="this.nextElementSibling.classList.toggle('hidden')">
+                     data-action="toggleYearGroup">
                     <span class="font-medium text-gray-700 text-sm">
                         <span class="inline-block">&#9654;</span>
                         ${year} <span class="text-gray-400 text-xs">(${rows.length} payments)</span>
@@ -1153,7 +1153,7 @@ async function _viewScenario(id) {
                     <h2 class="text-lg font-bold">${escapeHtml(data.name)}</h2>
                     ${data.description ? `<p class="text-sm text-gray-500">${escapeHtml(data.description)}</p>` : ''}
                 </div>
-                <button onclick="app.closeModal()" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+                <button data-action="closeModal" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
             </div>
             ${overridesHtml}
             <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-4 text-sm">
@@ -1319,7 +1319,7 @@ async function createNewScenario() {
                 <textarea name="description" class="w-full border rounded px-3 py-1.5 text-sm" rows="2"></textarea></div>
             <div class="flex gap-2 pt-2">
                 <button type="submit" class="bg-indigo-600 text-white px-4 py-1.5 rounded text-sm hover:bg-indigo-700">Create</button>
-                <button type="button" onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
+                <button type="button" data-action="closeModal" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
             </div>
         </form>
     `);
@@ -1354,7 +1354,7 @@ async function renameActiveScenario() {
                 <input name="scenario_name" required value="${escapeHtml(active.name)}" class="w-full border rounded px-3 py-1.5 text-sm"></div>
             <div class="flex gap-2 pt-2">
                 <button type="submit" class="bg-indigo-600 text-white px-4 py-1.5 rounded text-sm hover:bg-indigo-700">Rename</button>
-                <button type="button" onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
+                <button type="button" data-action="closeModal" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
             </div>
         </form>
     `);
@@ -1383,8 +1383,8 @@ async function deleteActiveScenario() {
         <h2 class="text-lg font-bold mb-4 text-red-600">Delete Scenario</h2>
         <p class="text-sm text-gray-600 mb-4">Delete scenario "${escapeHtml(active.name)}"? This cannot be undone.</p>
         <div class="flex gap-2">
-            <button onclick="app._confirmDeleteActiveScenario()" class="bg-red-600 text-white px-4 py-1.5 rounded text-sm hover:bg-red-700">Confirm Delete</button>
-            <button onclick="app.closeModal()" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
+            <button data-action="_confirmDeleteActiveScenario" class="bg-red-600 text-white px-4 py-1.5 rounded text-sm hover:bg-red-700">Confirm Delete</button>
+            <button data-action="closeModal" class="text-gray-500 px-4 py-1.5 text-sm">Cancel</button>
         </div>
     `);
 }
@@ -1441,6 +1441,69 @@ window.app = {
     saveActiveScenario, renameActiveScenario, deleteActiveScenario,
     _confirmDeleteActiveScenario,
 };
+
+// --- Central Event Dispatcher (replaces inline onclick/onchange) ---
+
+const clickActions = {
+    showCreateLoan: () => showCreateLoan(),
+    switchTab: (_el, e) => { const t = e.target.closest('[data-tab]'); if (t) switchTab(t.dataset.tab); },
+    startRenameLoan: () => startRenameLoan(),
+    cancelRenameLoan: () => cancelRenameLoan(),
+    showEditLoan: () => showEditLoan(),
+    confirmDeleteLoan: () => confirmDeleteLoan(),
+    deleteLoan: () => deleteLoan(),
+    closeModal: () => closeModal(),
+    saveActiveScenario: () => saveActiveScenario(),
+    renameActiveScenario: () => renameActiveScenario(),
+    deleteActiveScenario: () => deleteActiveScenario(),
+    _confirmDeleteActiveScenario: () => _confirmDeleteActiveScenario(),
+    showAddRateChange: () => showAddRateChange(),
+    showAddRepaymentChange: () => showAddRepaymentChange(),
+    showAddExtra: () => showAddExtra(),
+    toggleWhatIf: () => toggleWhatIf(),
+    calcPayoffTarget: () => calcPayoffTarget(),
+    saveWhatIfScenario: () => saveWhatIfScenario(),
+    applyWhatIf: () => applyWhatIf(),
+    resetWhatIf: () => resetWhatIf(),
+    compareSelected: () => compareSelected(),
+    deleteRateChange: (el) => deleteRateChange(parseInt(el.dataset.id, 10)),
+    deleteRepaymentChange: (el) => deleteRepaymentChange(parseInt(el.dataset.id, 10)),
+    deleteExtra: (el) => deleteExtra(parseInt(el.dataset.id, 10)),
+    exportSchedule: (el) => exportSchedule(el.dataset.format),
+    _toggleScenario: (el) => _toggleScenario(parseInt(el.dataset.id, 10), el.checked),
+    _viewScenario: (el) => _viewScenario(parseInt(el.dataset.id, 10)),
+    _loadScenario: (el) => _loadScenario(parseInt(el.dataset.id, 10)),
+    _deleteScenario: (el) => _deleteScenario(parseInt(el.dataset.id, 10)),
+    _togglePaid: (el) => _togglePaid(parseInt(el.dataset.number, 10), el.checked),
+    _calcAndFillRepayment: (el) => _calcAndFillRepayment(el.dataset.formId),
+    _confirmApplyWhatIf: (el) => _confirmApplyWhatIf(parseFloat(el.dataset.amount)),
+    toggleYearGroup: (el) => {
+        const content = el.nextElementSibling;
+        if (content) {
+            if (content.classList.contains('year-group-content')) {
+                content.classList.toggle('collapsed');
+            } else {
+                content.classList.toggle('hidden');
+            }
+        }
+        const chevron = el.querySelector('.chevron');
+        if (chevron) chevron.classList.toggle('rotate-90');
+    },
+};
+
+document.addEventListener('click', (e) => {
+    const el = e.target.closest('[data-action]');
+    if (!el) return;
+    const handler = clickActions[el.dataset.action];
+    if (handler) handler(el, e);
+});
+
+document.addEventListener('change', (e) => {
+    const el = e.target.closest('[data-action]');
+    if (!el) return;
+    const handler = clickActions[el.dataset.action];
+    if (handler) handler(el, e);
+});
 
 // --- Init ---
 

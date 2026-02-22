@@ -34,8 +34,8 @@ export function renderSchedule(state, helpers, isWhatIf = false) {
 
     // Export buttons
     let html = `<div class="flex gap-2 mb-3 no-print">
-        <button onclick="app.exportSchedule('csv')" class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200">Export CSV</button>
-        <button onclick="app.exportSchedule('xlsx')" class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200">Export XLSX</button>
+        <button data-action="exportSchedule" data-format="csv" class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200">Export CSV</button>
+        <button data-action="exportSchedule" data-format="xlsx" class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200">Export XLSX</button>
         <span class="text-xs text-gray-400 ml-2">Total Interest: ${fmtMoney(s.summary.total_interest)}</span>
     </div>`;
 
@@ -48,7 +48,7 @@ export function renderSchedule(state, helpers, isWhatIf = false) {
 
         html += `<div class="year-group bg-white rounded-xl shadow mb-2">
             <div class="flex justify-between items-center px-4 py-2 cursor-pointer hover:bg-gray-50 rounded-t-xl"
-                 onclick="this.nextElementSibling.classList.toggle('collapsed'); this.querySelector('.chevron').classList.toggle('rotate-90')">
+                 data-action="toggleYearGroup">
                 <span class="font-medium text-gray-700">
                     <span class="chevron inline-block transition-transform ${expanded ? 'rotate-90' : ''}">&#9654;</span>
                     ${year} <span class="text-gray-400 text-sm">(${rows.length} payments)</span>
@@ -85,7 +85,7 @@ export function renderSchedule(state, helpers, isWhatIf = false) {
                     <input type="checkbox" class="paid-checkbox"
                         ${row.is_paid ? 'checked' : ''}
                         ${isWhatIf ? 'disabled' : ''}
-                        onchange="app._togglePaid(${row.number}, this.checked)">
+                        data-action="_togglePaid" data-number="${row.number}">
                 </td>
                 <td class="px-2 py-1 text-gray-500">${row.number}</td>
                 <td class="px-2 py-1">${fmtDate(row.date)}</td>
@@ -123,7 +123,7 @@ function renderRateChanges(loan, state, { fmtDate, fmtPct, escapeHtml }) {
     container.innerHTML = loan.rate_changes.map(rc => `
         <div class="flex justify-between items-center py-1 border-b last:border-0">
             <span>${fmtDate(rc.effective_date)} → ${fmtPct(rc.annual_rate)} ${rc.note ? `<span class="text-gray-400">(${escapeHtml(rc.note)})</span>` : ''}</span>
-            <button onclick="app.deleteRateChange(${rc.id})" class="text-red-400 hover:text-red-600 text-xs">Remove</button>
+            <button data-action="deleteRateChange" data-id="${rc.id}" class="text-red-400 hover:text-red-600 text-xs">Remove</button>
         </div>
     `).join('');
 }
@@ -139,7 +139,7 @@ function renderRepaymentChanges(loan, state, { fmtDate, fmtMoney, escapeHtml }) 
     container.innerHTML = loan.repayment_changes.map(rc => `
         <div class="flex justify-between items-center py-1 border-b last:border-0">
             <span>${fmtDate(rc.effective_date)} → ${fmtMoney(rc.amount)}/period ${rc.note ? `<span class="text-gray-400">(${escapeHtml(rc.note)})</span>` : ''}</span>
-            <button onclick="app.deleteRepaymentChange(${rc.id})" class="text-red-400 hover:text-red-600 text-xs">Remove</button>
+            <button data-action="deleteRepaymentChange" data-id="${rc.id}" class="text-red-400 hover:text-red-600 text-xs">Remove</button>
         </div>
     `).join('');
 }
@@ -155,7 +155,7 @@ function renderExtras(loan, state, { fmtDate, fmtMoney, escapeHtml }) {
     container.innerHTML = loan.extra_repayments.map(er => `
         <div class="flex justify-between items-center py-1 border-b last:border-0">
             <span>${fmtDate(er.payment_date)} → ${fmtMoney(er.amount)} ${er.note ? `<span class="text-gray-400">(${escapeHtml(er.note)})</span>` : ''}</span>
-            <button onclick="app.deleteExtra(${er.id})" class="text-red-400 hover:text-red-600 text-xs">Remove</button>
+            <button data-action="deleteExtra" data-id="${er.id}" class="text-red-400 hover:text-red-600 text-xs">Remove</button>
         </div>
     `).join('');
 }
