@@ -182,8 +182,11 @@ async function selectLoan(id) {
     switchTab(state.currentTab);
 }
 
+let _loadingSchedule = false;
+
 async function loadSchedule() {
-    if (!state.currentLoanId) return;
+    if (!state.currentLoanId || _loadingSchedule) return;
+    _loadingSchedule = true;
     if (state.scheduleAbort) state.scheduleAbort.abort();
     state.scheduleAbort = new AbortController();
     try {
@@ -198,6 +201,8 @@ async function loadSchedule() {
     } catch (e) {
         if (e.name === 'AbortError') return;
         toast('Failed to load schedule: ' + e.message, 'error');
+    } finally {
+        _loadingSchedule = false;
     }
 }
 

@@ -115,15 +115,18 @@ def compare_scenarios(loan_id: int, ids: str = Query(...), db: Session = Depends
     if len(scenarios) < 2:
         raise HTTPException(status_code=422, detail="Need at least 2 scenarios to compare")
 
-    return [
-        {
+    MAX_SCHEDULE_JSON = 10_000_000  # 10 MB
+    results = []
+    for s in scenarios:
+        if s.schedule_json and len(s.schedule_json) > MAX_SCHEDULE_JSON:
+            raise HTTPException(status_code=422, detail=f"Scenario '{s.name}' schedule data too large")
+        results.append({
             "id": s.id,
             "name": s.name,
             "total_interest": s.total_interest,
             "total_paid": s.total_paid,
             "payoff_date": s.payoff_date,
             "actual_num_repayments": s.actual_num_repayments,
-            "schedule": json.loads(s.schedule_json),
-        }
-        for s in scenarios
-    ]
+            "schedule": json.loads(s.schedule_json) if s.schedule_json else [],
+        })
+    return results

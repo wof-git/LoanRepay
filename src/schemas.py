@@ -13,7 +13,7 @@ def _validate_date(v: str) -> str:
 
 
 class LoanCreate(BaseModel):
-    name: str
+    name: str = Field(max_length=255)
     principal: float = Field(gt=0, le=100_000_000)
     annual_rate: float = Field(ge=0, le=100)
     frequency: str = Field(pattern="^(weekly|fortnightly|monthly)$")
@@ -28,13 +28,13 @@ class LoanCreate(BaseModel):
 
 
 class LoanUpdate(BaseModel):
-    name: Optional[str] = None
+    name: Optional[str] = Field(default=None, max_length=255)
     principal: Optional[float] = Field(default=None, gt=0, le=100_000_000)
     annual_rate: Optional[float] = Field(default=None, ge=0, le=100)
     frequency: Optional[str] = Field(default=None, pattern="^(weekly|fortnightly|monthly)$")
     start_date: Optional[str] = None
     loan_term: Optional[int] = Field(default=None, gt=0, le=1200)
-    fixed_repayment: Optional[float] = Field(default=None, ge=0, le=100_000_000)
+    fixed_repayment: Optional[float] = Field(default=None, gt=0, le=100_000_000)
 
     @field_validator("start_date")
     @classmethod
@@ -71,7 +71,7 @@ class RateChangeCreate(BaseModel):
     effective_date: str
     annual_rate: float = Field(ge=0, le=100)
     adjusted_repayment: Optional[float] = Field(default=None, gt=0, le=100_000_000)
-    note: Optional[str] = None
+    note: Optional[str] = Field(default=None, max_length=500)
 
     @field_validator("effective_date")
     @classmethod
@@ -94,7 +94,7 @@ class RateChangeResponse(BaseModel):
 class ExtraRepaymentCreate(BaseModel):
     payment_date: str
     amount: float = Field(gt=0, le=100_000_000)
-    note: Optional[str] = None
+    note: Optional[str] = Field(default=None, max_length=500)
 
     @field_validator("payment_date")
     @classmethod
@@ -116,7 +116,7 @@ class ExtraRepaymentResponse(BaseModel):
 class RepaymentChangeCreate(BaseModel):
     effective_date: str
     amount: float = Field(gt=0, le=100_000_000)
-    note: Optional[str] = None
+    note: Optional[str] = Field(default=None, max_length=500)
 
     @field_validator("effective_date")
     @classmethod
@@ -176,8 +176,8 @@ class ScheduleResponse(BaseModel):
 
 
 class ScenarioCreate(BaseModel):
-    name: str
-    description: Optional[str] = None
+    name: str = Field(max_length=255)
+    description: Optional[str] = Field(default=None, max_length=1000)
     whatif_fixed_repayment: Optional[float] = None
     whatif_additional_rate_changes: Optional[list[RateChangeCreate]] = None
     whatif_additional_extra_repayments: Optional[list[ExtraRepaymentCreate]] = None
