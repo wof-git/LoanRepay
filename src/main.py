@@ -31,7 +31,16 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="LoanRepay", version="1.0.0", lifespan=lifespan)
+_is_production = os.getenv("ENV") == "production"
+
+app = FastAPI(
+    title="LoanRepay",
+    version="1.0.0",
+    lifespan=lifespan,
+    docs_url=None if _is_production else "/docs",
+    redoc_url=None,
+    openapi_url=None if _is_production else "/openapi.json",
+)
 
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
@@ -40,6 +49,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-Content-Type-Options"] = "nosniff"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; "
+            "style-src 'self' https://cdn.tailwindcss.com 'unsafe-inline'; "
+            "img-src 'self' data:; "
+            "connect-src 'self'"
+        )
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
         return response
 
 

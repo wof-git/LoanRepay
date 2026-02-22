@@ -108,6 +108,8 @@ def compare_scenarios(loan_id: int, ids: str = Query(...), db: Session = Depends
         id_list = [int(x.strip()) for x in ids.split(",") if x.strip()]
     except ValueError:
         raise HTTPException(status_code=422, detail="Invalid scenario IDs — must be comma-separated integers")
+    if len(id_list) > 10:
+        raise HTTPException(status_code=400, detail="Compare at most 10 scenarios")
     scenarios = db.query(Scenario).filter(Scenario.id.in_(id_list), Scenario.loan_id == loan_id).all()
 
     if len(scenarios) < 2:

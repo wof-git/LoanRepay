@@ -1,3 +1,4 @@
+from datetime import date, datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
@@ -8,7 +9,6 @@ from src.schemas import (
     PayoffTargetResponse, RateChangeCreate, RateChangeOption, RateChangePreviewResponse,
     RepaymentChangeCreate, RepaymentChangePreviewResponse,
 )
-from datetime import date
 from src.calculator import calculate_schedule, find_repayment_for_target_date, add_period
 
 router = APIRouter(prefix="/api/loans/{loan_id}", tags=["schedule"])
@@ -151,6 +151,7 @@ def mark_paid(loan_id: int, repayment_number: int, db: Session = Depends(get_db)
     try:
         paid = PaidRepayment(loan_id=loan_id, repayment_number=repayment_number)
         db.add(paid)
+        loan.updated_at = datetime.now(timezone.utc).isoformat()
         db.commit()
     except IntegrityError:
         db.rollback()
@@ -166,6 +167,9 @@ def unmark_paid(loan_id: int, repayment_number: int, db: Session = Depends(get_d
     ).first()
     if paid:
         db.delete(paid)
+        loan = db.query(Loan).filter(Loan.id == loan_id).first()
+        if loan:
+            loan.updated_at = datetime.now(timezone.utc).isoformat()
         db.commit()
     return {"detail": "Unmarked as paid"}
 

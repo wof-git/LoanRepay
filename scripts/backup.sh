@@ -7,6 +7,11 @@ DB_PATH="${LOANREPAY_DB:-/volume3/Wof/repo/LoanRepay/data/loanrepay.db}"
 BACKUP_DIR="${LOANREPAY_BACKUP_DIR:-/volume3/Wof/repo/LoanRepay/backups}"
 KEEP_DAYS="${LOANREPAY_BACKUP_KEEP_DAYS:-14}"
 
+if ! [[ "$KEEP_DAYS" =~ ^[0-9]+$ ]]; then
+    echo "ERROR: KEEP_DAYS must be numeric, got: $KEEP_DAYS" >&2
+    exit 1
+fi
+
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="${BACKUP_DIR}/loanrepay_${TIMESTAMP}.db"
 

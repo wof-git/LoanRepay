@@ -1,5 +1,6 @@
 """Pure-function loan calculator. No DB, no async."""
 
+import math
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from dateutil.relativedelta import relativedelta
@@ -47,7 +48,10 @@ def pmt(rate_per_period: float, num_periods: int, present_value: float) -> float
     r = rate_per_period
     n = num_periods
     pv = present_value
-    payment = pv * r * (1 + r) ** n / ((1 + r) ** n - 1)
+    factor = (1 + r) ** n
+    if not math.isfinite(factor):
+        raise ValueError(f"PMT overflow: rate={r}, periods={n} produces infinite factor")
+    payment = pv * r * factor / (factor - 1)
     return round(payment, 2)
 
 
@@ -253,6 +257,12 @@ def calculate_schedule(
     result = ScheduleResult()
     total_interest = 0.0
     total_paid = 0.0
+
+    # Early negative amortization detection
+    if fixed_repayment is not None:
+        first_period_interest = round(principal * annual_rate / ppy, 2)
+        if fixed_repayment < first_period_interest:
+            result.warning = "Repayment does not cover interest. Loan will not be paid off."
 
     for i in range(1, MAX_ITERATIONS + 1):
         if balance < ZERO_THRESHOLD:

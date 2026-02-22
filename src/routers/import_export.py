@@ -7,7 +7,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from src.database import get_db
 from src.models import Loan
-from src.schemas import LoanResponse
+from src.schemas import LoanCreate, LoanResponse
 from src.routers.schedule import _build_schedule
 
 logger = logging.getLogger(__name__)
@@ -23,7 +23,7 @@ async def import_spreadsheet(file: UploadFile = File(...), db: Session = Depends
 
     try:
         import openpyxl
-        contents = await file.read()
+        contents = await file.read(MAX_UPLOAD_BYTES + 1)
         if len(contents) > MAX_UPLOAD_BYTES:
             raise HTTPException(status_code=413, detail=f"File too large (max {MAX_UPLOAD_BYTES // 1024 // 1024} MB)")
         wb = openpyxl.load_workbook(io.BytesIO(contents), data_only=True)
@@ -79,7 +79,8 @@ async def import_spreadsheet(file: UploadFile = File(...), db: Session = Depends
         # Extract name from filename
         name = file.filename.replace(".xlsx", "").replace("_", " ").strip()
 
-        loan = Loan(
+        # Validate through Pydantic before DB insert
+        loan_data = LoanCreate(
             name=name,
             principal=principal,
             annual_rate=rate,
@@ -88,6 +89,7 @@ async def import_spreadsheet(file: UploadFile = File(...), db: Session = Depends
             loan_term=int(total_periods),
             fixed_repayment=fixed_repayment,
         )
+        loan = Loan(**loan_data.model_dump())
         db.add(loan)
         db.commit()
         db.refresh(loan)

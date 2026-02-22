@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from src.database import get_db
@@ -45,7 +45,7 @@ def update_loan(loan_id: int, updates: LoanUpdate, db: Session = Depends(get_db)
     update_data = updates.model_dump(exclude_unset=True)
     for key, value in update_data.items():
         setattr(loan, key, value)
-    loan.updated_at = datetime.now().isoformat()
+    loan.updated_at = datetime.now(timezone.utc).isoformat()
     db.commit()
     db.refresh(loan)
     return loan
@@ -72,6 +72,7 @@ def add_rate_change(loan_id: int, rc: RateChangeCreate, db: Session = Depends(ge
         raise HTTPException(status_code=422, detail="Rate change cannot be before loan start date")
     db_rc = RateChange(loan_id=loan_id, **rc.model_dump())
     db.add(db_rc)
+    loan.updated_at = datetime.now(timezone.utc).isoformat()
     db.commit()
     db.refresh(db_rc)
     return db_rc
@@ -82,7 +83,10 @@ def delete_rate_change(loan_id: int, rate_id: int, db: Session = Depends(get_db)
     rc = db.query(RateChange).filter(RateChange.id == rate_id, RateChange.loan_id == loan_id).first()
     if not rc:
         raise HTTPException(status_code=404, detail="Rate change not found")
+    loan = db.query(Loan).filter(Loan.id == loan_id).first()
     db.delete(rc)
+    if loan:
+        loan.updated_at = datetime.now(timezone.utc).isoformat()
     db.commit()
     return {"detail": "Rate change deleted"}
 
@@ -96,6 +100,7 @@ def add_extra_repayment(loan_id: int, er: ExtraRepaymentCreate, db: Session = De
         raise HTTPException(status_code=404, detail="Loan not found")
     db_er = ExtraRepayment(loan_id=loan_id, **er.model_dump())
     db.add(db_er)
+    loan.updated_at = datetime.now(timezone.utc).isoformat()
     db.commit()
     db.refresh(db_er)
     return db_er
@@ -106,7 +111,10 @@ def delete_extra_repayment(loan_id: int, extra_id: int, db: Session = Depends(ge
     er = db.query(ExtraRepayment).filter(ExtraRepayment.id == extra_id, ExtraRepayment.loan_id == loan_id).first()
     if not er:
         raise HTTPException(status_code=404, detail="Extra repayment not found")
+    loan = db.query(Loan).filter(Loan.id == loan_id).first()
     db.delete(er)
+    if loan:
+        loan.updated_at = datetime.now(timezone.utc).isoformat()
     db.commit()
     return {"detail": "Extra repayment deleted"}
 
@@ -122,6 +130,7 @@ def add_repayment_change(loan_id: int, rc: RepaymentChangeCreate, db: Session = 
         raise HTTPException(status_code=422, detail="Repayment change cannot be before loan start date")
     db_rc = RepaymentChange(loan_id=loan_id, **rc.model_dump())
     db.add(db_rc)
+    loan.updated_at = datetime.now(timezone.utc).isoformat()
     db.commit()
     db.refresh(db_rc)
     return db_rc
@@ -132,6 +141,9 @@ def delete_repayment_change(loan_id: int, change_id: int, db: Session = Depends(
     rc = db.query(RepaymentChange).filter(RepaymentChange.id == change_id, RepaymentChange.loan_id == loan_id).first()
     if not rc:
         raise HTTPException(status_code=404, detail="Repayment change not found")
+    loan = db.query(Loan).filter(Loan.id == loan_id).first()
     db.delete(rc)
+    if loan:
+        loan.updated_at = datetime.now(timezone.utc).isoformat()
     db.commit()
     return {"detail": "Repayment change deleted"}

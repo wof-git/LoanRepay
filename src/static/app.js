@@ -7,10 +7,12 @@ const API = '/api';
 const state = {
     loans: [],
     currentLoanId: null,
+    currentLoan: null,
     currentTab: 'dashboard',
     schedule: null,
     whatIfActive: false,
     whatIfAbort: null,
+    scheduleAbort: null,
     selectedScenarios: new Set(),
 };
 
@@ -62,9 +64,14 @@ document.getElementById('modal-overlay').addEventListener('click', (e) => {
     if (e.target === e.currentTarget) closeModal();
 });
 
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') closeModal();
+});
+
 // --- Formatting ---
 
 function fmtMoney(n) {
+    if (n == null || isNaN(n)) return '$0.00';
     return '$' + Number(n).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
@@ -105,7 +112,7 @@ function _calcAndFillRepayment(formId) {
     const principal = parseFloat(form.querySelector('[name="principal"]').value);
     const rate = parseFloat(form.querySelector('[name="annual_rate"]').value);
     const frequency = form.querySelector('[name="frequency"]').value;
-    const term = parseInt(form.querySelector('[name="loan_term"]').value);
+    const term = parseInt(form.querySelector('[name="loan_term"]').value, 10);
     if (!principal || !rate || !frequency || !term) {
         toast('Fill in principal, rate, frequency, and term first', 'error');
         return;
@@ -145,7 +152,7 @@ function renderLoanSelector() {
 }
 
 document.getElementById('loan-selector').addEventListener('change', (e) => {
-    if (e.target.value) selectLoan(parseInt(e.target.value));
+    if (e.target.value) selectLoan(parseInt(e.target.value, 10));
 });
 
 function showEmptyState() {
@@ -166,16 +173,30 @@ async function selectLoan(id) {
     state.currentLoanId = id;
     renderLoanSelector();
     hideEmptyState();
+    // Abort any in-flight what-if and clear debounce
+    if (state.whatIfAbort) state.whatIfAbort.abort();
+    clearTimeout(whatIfDebounce);
+    // Abort previous schedule load
+    if (state.scheduleAbort) state.scheduleAbort.abort();
     await loadSchedule();
     switchTab(state.currentTab);
 }
 
 async function loadSchedule() {
     if (!state.currentLoanId) return;
+    if (state.scheduleAbort) state.scheduleAbort.abort();
+    state.scheduleAbort = new AbortController();
     try {
-        state.schedule = await api(`/loans/${state.currentLoanId}/schedule`);
+        const opts = { signal: state.scheduleAbort.signal };
+        const [schedule, loan] = await Promise.all([
+            api(`/loans/${state.currentLoanId}/schedule`, opts),
+            api(`/loans/${state.currentLoanId}`, opts),
+        ]);
+        state.schedule = schedule;
+        state.currentLoan = loan;
         updateSummaryBar();
     } catch (e) {
+        if (e.name === 'AbortError') return;
         toast('Failed to load schedule: ' + e.message, 'error');
     }
 }
@@ -197,6 +218,9 @@ function updateSummaryBar() {
 
 function switchTab(tab) {
     state.currentTab = tab;
+    // Clean up what-if state on tab switch
+    if (state.whatIfAbort) state.whatIfAbort.abort();
+    clearTimeout(whatIfDebounce);
     document.querySelectorAll('.tab-btn').forEach(btn => {
         const isActive = btn.dataset.tab === tab;
         btn.classList.toggle('bg-white', isActive);
@@ -261,7 +285,7 @@ function showCreateLoan() {
             annual_rate: parseFloat(fd.get('annual_rate')) / 100,
             frequency: fd.get('frequency'),
             start_date: fd.get('start_date'),
-            loan_term: parseInt(fd.get('loan_term')),
+            loan_term: parseInt(fd.get('loan_term'), 10),
         };
         const fr = fd.get('fixed_repayment');
         if (fr) data.fixed_repayment = parseFloat(fr);
@@ -326,7 +350,7 @@ function showEditLoan() {
             annual_rate: parseFloat(fd.get('annual_rate')) / 100,
             frequency: fd.get('frequency'),
             start_date: fd.get('start_date'),
-            loan_term: parseInt(fd.get('loan_term')),
+            loan_term: parseInt(fd.get('loan_term'), 10),
         };
         const fr = fd.get('fixed_repayment');
         data.fixed_repayment = fr ? parseFloat(fr) : null;
@@ -604,7 +628,7 @@ async function saveWhatIfScenario() {
     }
 
     const includesHtml = includes.length > 0
-        ? `<div class="bg-indigo-50 border border-indigo-200 rounded p-2 mb-3"><p class="text-xs font-medium text-indigo-700 mb-1">Includes:</p><ul class="text-xs text-indigo-600 list-disc list-inside">${includes.map(i => `<li>${i}</li>`).join('')}</ul></div>`
+        ? `<div class="bg-indigo-50 border border-indigo-200 rounded p-2 mb-3"><p class="text-xs font-medium text-indigo-700 mb-1">Includes:</p><ul class="text-xs text-indigo-600 list-disc list-inside">${includes.map(i => `<li>${escapeHtml(i)}</li>`).join('')}</ul></div>`
         : '<p class="text-xs text-gray-400 mb-3">No what-if adjustments — base state will be saved.</p>';
 
     const autoDesc = includes.length > 0 ? includes.join('; ') : '';
@@ -662,7 +686,7 @@ async function calcPayoffTarget() {
     const targetDate = document.getElementById('whatif-target-date').value;
     if (!targetDate || !state.currentLoanId) return;
     try {
-        const result = await api(`/loans/${state.currentLoanId}/payoff-target?date=${targetDate}`);
+        const result = await api(`/loans/${state.currentLoanId}/payoff-target?date=${encodeURIComponent(targetDate)}`);
         const loan = state.loans.find(l => l.id === state.currentLoanId);
         const freqLabel = loan?.frequency === 'weekly' ? 'per week' : loan?.frequency === 'monthly' ? 'per month' : 'per fortnight';
         document.getElementById('payoff-result').textContent =
@@ -726,7 +750,7 @@ function _showRatePreviewStep(preview, rateDate, newRate, note) {
         const opt = preview.options[0];
         area.innerHTML = `
             <div class="bg-gray-50 border rounded p-3 mt-2">
-                <p class="text-sm font-medium mb-1">${opt.label}</p>
+                <p class="text-sm font-medium mb-1">${escapeHtml(opt.label)}</p>
                 <p class="text-xs text-gray-600">Payoff: ${fmtDate(opt.payoff_date)} | Interest: ${fmtMoney(opt.total_interest)} | Payments: ${opt.num_repayments}</p>
                 ${opt.interest_delta !== 0 ? `<p class="text-xs mt-1 ${opt.interest_delta > 0 ? 'text-red-600' : 'text-green-600'}">${opt.interest_delta > 0 ? '+' : ''}${fmtMoney(opt.interest_delta)} interest</p>` : ''}
             </div>
@@ -754,7 +778,7 @@ function _showRatePreviewStep(preview, rateDate, newRate, note) {
         cardsHtml += `
             <label class="block border rounded p-3 cursor-pointer hover:bg-blue-50 ${i === 0 ? 'border-blue-500 bg-blue-50' : ''}">
                 <input type="radio" name="rate_option" value="${i}" ${i === 0 ? 'checked' : ''} class="mr-2">
-                <span class="text-sm font-medium">${opt.label}</span>
+                <span class="text-sm font-medium">${escapeHtml(opt.label)}</span>
                 <p class="text-xs text-gray-600 ml-5">Payoff: ${fmtDate(opt.payoff_date)} | Interest: ${fmtMoney(opt.total_interest)} | Payments: ${opt.num_repayments}</p>
                 <p class="text-xs ml-5 ${deltaClass}">${deltaText}${repDeltaText}</p>
             </label>
@@ -779,7 +803,7 @@ function _showRatePreviewStep(preview, rateDate, newRate, note) {
     `;
 
     document.getElementById('rate-confirm-btn').addEventListener('click', () => {
-        const selected = parseInt(document.querySelector('input[name="rate_option"]:checked').value);
+        const selected = parseInt(document.querySelector('input[name="rate_option"]:checked').value, 10);
         const chosenOpt = preview.options[selected];
         // If user chose option B (adjust repayment), store it on the rate change
         const adjustedRepayment = (selected > 0 && chosenOpt.fixed_repayment !== preview.current_repayment)
@@ -982,7 +1006,7 @@ async function compareSelected() {
     }
     const ids = [...state.selectedScenarios].join(',');
     try {
-        const data = await api(`/loans/${state.currentLoanId}/scenarios/compare?ids=${ids}`);
+        const data = await api(`/loans/${state.currentLoanId}/scenarios/compare?ids=${encodeURIComponent(ids)}`);
         renderScenarios(state, { fmtMoney, fmtDate, escapeHtml, api, apiJson, toast, showModal, closeModal }, data);
     } catch (e) {
         toast('Failed: ' + e.message, 'error');
@@ -1006,7 +1030,7 @@ async function _togglePaid(num, checked) {
 
 function exportSchedule(format) {
     if (!state.currentLoanId) return;
-    window.open(`${API}/loans/${state.currentLoanId}/export?format=${format}`, '_blank');
+    window.open(`${API}/loans/${state.currentLoanId}/export?format=${encodeURIComponent(format)}`, '_blank');
 }
 
 // --- Scenario Helpers ---

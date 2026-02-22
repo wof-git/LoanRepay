@@ -1,15 +1,17 @@
-export async function renderSchedule(state, helpers, isWhatIf = false) {
-    const { fmtMoney, fmtDate, fmtPct, api } = helpers;
+export function renderSchedule(state, helpers, isWhatIf = false) {
+    const { fmtMoney, fmtDate, fmtPct } = helpers;
     const s = state.schedule;
     if (!s) return;
 
     const today = new Date().toISOString().split('T')[0];
 
-    // Render rate changes, repayment changes, extras lists (fetch loan once)
-    const loan = await api(`/loans/${state.currentLoanId}`);
-    renderRateChanges(loan, state, helpers);
-    renderRepaymentChanges(loan, state, helpers);
-    renderExtras(loan, state, helpers);
+    // Use loan from state (loaded by app.js) instead of fetching via API
+    const loan = state.currentLoan;
+    if (loan) {
+        renderRateChanges(loan, state, helpers);
+        renderRepaymentChanges(loan, state, helpers);
+        renderExtras(loan, state, helpers);
+    }
 
     // Group rows by year
     const yearGroups = {};

@@ -1,25 +1,47 @@
-from pydantic import BaseModel, Field
+from datetime import date
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional
+
+
+def _validate_date(v: str) -> str:
+    """Validate date string is a real date, not just matching a regex."""
+    try:
+        date.fromisoformat(v)
+    except (ValueError, TypeError):
+        raise ValueError(f"Invalid date: {v!r} — expected YYYY-MM-DD")
+    return v
 
 
 class LoanCreate(BaseModel):
     name: str
-    principal: float = Field(gt=0)
-    annual_rate: float = Field(ge=0)
+    principal: float = Field(gt=0, le=100_000_000)
+    annual_rate: float = Field(ge=0, le=100)
     frequency: str = Field(pattern="^(weekly|fortnightly|monthly)$")
-    start_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
-    loan_term: int = Field(gt=0)
-    fixed_repayment: Optional[float] = Field(default=None, gt=0)
+    start_date: str
+    loan_term: int = Field(gt=0, le=1200)
+    fixed_repayment: Optional[float] = Field(default=None, gt=0, le=100_000_000)
+
+    @field_validator("start_date")
+    @classmethod
+    def validate_start_date(cls, v):
+        return _validate_date(v)
 
 
 class LoanUpdate(BaseModel):
     name: Optional[str] = None
-    principal: Optional[float] = Field(default=None, gt=0)
-    annual_rate: Optional[float] = Field(default=None, ge=0)
+    principal: Optional[float] = Field(default=None, gt=0, le=100_000_000)
+    annual_rate: Optional[float] = Field(default=None, ge=0, le=100)
     frequency: Optional[str] = Field(default=None, pattern="^(weekly|fortnightly|monthly)$")
-    start_date: Optional[str] = Field(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")
-    loan_term: Optional[int] = Field(default=None, gt=0)
-    fixed_repayment: Optional[float] = Field(default=None, gt=0)
+    start_date: Optional[str] = None
+    loan_term: Optional[int] = Field(default=None, gt=0, le=1200)
+    fixed_repayment: Optional[float] = Field(default=None, ge=0, le=100_000_000)
+
+    @field_validator("start_date")
+    @classmethod
+    def validate_start_date(cls, v):
+        if v is None:
+            return v
+        return _validate_date(v)
 
 
 class LoanResponse(BaseModel):
@@ -46,10 +68,15 @@ class LoanDetailResponse(LoanResponse):
 
 
 class RateChangeCreate(BaseModel):
-    effective_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
-    annual_rate: float = Field(ge=0)
-    adjusted_repayment: Optional[float] = Field(default=None, gt=0)
+    effective_date: str
+    annual_rate: float = Field(ge=0, le=100)
+    adjusted_repayment: Optional[float] = Field(default=None, gt=0, le=100_000_000)
     note: Optional[str] = None
+
+    @field_validator("effective_date")
+    @classmethod
+    def validate_effective_date(cls, v):
+        return _validate_date(v)
 
 
 class RateChangeResponse(BaseModel):
@@ -65,9 +92,14 @@ class RateChangeResponse(BaseModel):
 
 
 class ExtraRepaymentCreate(BaseModel):
-    payment_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
-    amount: float = Field(gt=0)
+    payment_date: str
+    amount: float = Field(gt=0, le=100_000_000)
     note: Optional[str] = None
+
+    @field_validator("payment_date")
+    @classmethod
+    def validate_payment_date(cls, v):
+        return _validate_date(v)
 
 
 class ExtraRepaymentResponse(BaseModel):
@@ -82,9 +114,14 @@ class ExtraRepaymentResponse(BaseModel):
 
 
 class RepaymentChangeCreate(BaseModel):
-    effective_date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
-    amount: float = Field(gt=0)
+    effective_date: str
+    amount: float = Field(gt=0, le=100_000_000)
     note: Optional[str] = None
+
+    @field_validator("effective_date")
+    @classmethod
+    def validate_effective_date(cls, v):
+        return _validate_date(v)
 
 
 class RepaymentChangeResponse(BaseModel):
