@@ -8,6 +8,6 @@ services:
     volumes:
       - ../data:/app/data
     ports:
-      - "127.0.0.1:5050:8000"
+      - "5050:8000"
     environment:
       - DATA_DIR=/app/data
