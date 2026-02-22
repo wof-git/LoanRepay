@@ -37,4 +37,4 @@ docker compose -f docker/compose.yaml up --build
 ```
 
 ## Database
-SQLite in `data/loanrepay.db`. 5 tables: loans, rate_changes, extra_repayments, paid_repayments, scenarios.
+SQLite in `data/loanrepay.db`. 6 tables: loans, rate_changes, repayment_changes, extra_repayments, paid_repayments, scenarios.
