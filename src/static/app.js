@@ -54,13 +54,32 @@ function toast(message, type = 'info') {
 
 // --- Modal ---
 
+let _modalPreviousFocus = null;
+
 function showModal(html) {
-    document.getElementById('modal-content').innerHTML = html;
+    _modalPreviousFocus = document.activeElement;
+    const content = document.getElementById('modal-content');
+    content.innerHTML = html;
+    // Set aria-labelledby if modal has a heading
+    const heading = content.querySelector('h2, h3');
+    if (heading) {
+        if (!heading.id) heading.id = 'modal-heading';
+        content.setAttribute('aria-labelledby', heading.id);
+    } else {
+        content.removeAttribute('aria-labelledby');
+    }
     document.getElementById('modal-overlay').classList.remove('hidden');
+    // Focus first focusable element
+    const focusable = content.querySelectorAll('button, [href], input:not([type="hidden"]), select, textarea, [tabindex]:not([tabindex="-1"])');
+    if (focusable.length) focusable[0].focus();
 }
 
 function closeModal() {
     document.getElementById('modal-overlay').classList.add('hidden');
+    if (_modalPreviousFocus && typeof _modalPreviousFocus.focus === 'function') {
+        _modalPreviousFocus.focus();
+        _modalPreviousFocus = null;
+    }
 }
 
 document.getElementById('modal-overlay').addEventListener('click', (e) => {
@@ -69,6 +88,19 @@ document.getElementById('modal-overlay').addEventListener('click', (e) => {
 
 document.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') closeModal();
+    // Focus trap within modal
+    if (e.key === 'Tab' && !document.getElementById('modal-overlay').classList.contains('hidden')) {
+        const content = document.getElementById('modal-content');
+        const focusable = content.querySelectorAll('button, [href], input:not([type="hidden"]):not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (focusable.length === 0) return;
+        const first = focusable[0];
+        const last = focusable[focusable.length - 1];
+        if (e.shiftKey) {
+            if (document.activeElement === first) { e.preventDefault(); last.focus(); }
+        } else {
+            if (document.activeElement === last) { e.preventDefault(); first.focus(); }
+        }
+    }
 });
 
 // --- Formatting ---
@@ -240,6 +272,7 @@ function switchTab(tab) {
         btn.classList.toggle('border-b-2', isActive);
         btn.classList.toggle('border-blue-600', isActive);
         btn.classList.toggle('text-gray-500', !isActive);
+        btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
     });
     ['dashboard', 'schedule', 'scenarios'].forEach(t => {
         document.getElementById(`tab-${t}`).classList.toggle('hidden', t !== tab);
@@ -451,6 +484,8 @@ function toggleWhatIf() {
     const toggle = document.getElementById('whatif-toggle');
     state.whatIfActive = panel.classList.toggle('hidden') === false;
     toggle.innerHTML = state.whatIfActive ? '&#9660; Collapse' : '&#9654; Expand';
+    const toggleDiv = toggle.closest('[data-action="toggleWhatIf"]');
+    if (toggleDiv) toggleDiv.setAttribute('aria-expanded', state.whatIfActive ? 'true' : 'false');
     if (state.whatIfActive && state.schedule) {
         const loan = state.loans.find(l => l.id === state.currentLoanId);
         const repayment = loan?.fixed_repayment || state.schedule.rows[0]?.calculated_pmt || 500;
@@ -1479,13 +1514,17 @@ const clickActions = {
     _confirmApplyWhatIf: (el) => _confirmApplyWhatIf(parseFloat(el.dataset.amount)),
     toggleYearGroup: (el) => {
         const content = el.nextElementSibling;
+        let expanded = false;
         if (content) {
             if (content.classList.contains('year-group-content')) {
                 content.classList.toggle('collapsed');
+                expanded = !content.classList.contains('collapsed');
             } else {
                 content.classList.toggle('hidden');
+                expanded = !content.classList.contains('hidden');
             }
         }
+        el.setAttribute('aria-expanded', expanded ? 'true' : 'false');
         const chevron = el.querySelector('.chevron');
         if (chevron) chevron.classList.toggle('rotate-90');
     },

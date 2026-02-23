@@ -34,8 +34,8 @@ export function renderSchedule(state, helpers, isWhatIf = false) {
 
     // Export buttons
     let html = `<div class="flex gap-2 mb-3 no-print">
-        <button data-action="exportSchedule" data-format="csv" class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200">Export CSV</button>
-        <button data-action="exportSchedule" data-format="xlsx" class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200">Export XLSX</button>
+        <button data-action="exportSchedule" data-format="csv" class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200" aria-label="Export schedule as CSV">Export CSV</button>
+        <button data-action="exportSchedule" data-format="xlsx" class="text-xs bg-gray-100 text-gray-700 px-3 py-1 rounded hover:bg-gray-200" aria-label="Export schedule as XLSX">Export XLSX</button>
         <span class="text-xs text-gray-400 ml-2">Total Interest: ${fmtMoney(s.summary.total_interest)}</span>
     </div>`;
 
@@ -48,9 +48,9 @@ export function renderSchedule(state, helpers, isWhatIf = false) {
 
         html += `<div class="year-group bg-white rounded-xl shadow mb-2">
             <div class="flex justify-between items-center px-4 py-2 cursor-pointer hover:bg-gray-50 rounded-t-xl"
-                 data-action="toggleYearGroup">
+                 data-action="toggleYearGroup" role="button" aria-expanded="${expanded}" tabindex="0">
                 <span class="font-medium text-gray-700">
-                    <span class="chevron inline-block transition-transform ${expanded ? 'rotate-90' : ''}">&#9654;</span>
+                    <span class="chevron inline-block transition-transform ${expanded ? 'rotate-90' : ''}" aria-hidden="true">&#9654;</span>
                     ${year} <span class="text-gray-400 text-sm">(${rows.length} payments)</span>
                 </span>
             </div>
@@ -85,7 +85,8 @@ export function renderSchedule(state, helpers, isWhatIf = false) {
                     <input type="checkbox" class="paid-checkbox"
                         ${row.is_paid ? 'checked' : ''}
                         ${isWhatIf ? 'disabled' : ''}
-                        data-action="_togglePaid" data-number="${row.number}">
+                        data-action="_togglePaid" data-number="${row.number}"
+                        aria-label="Mark payment ${row.number} as paid">
                 </td>
                 <td class="px-2 py-1 text-gray-500">${row.number}</td>
                 <td class="px-2 py-1">${fmtDate(row.date)}</td>
