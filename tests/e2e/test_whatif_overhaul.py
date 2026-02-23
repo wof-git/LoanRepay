@@ -82,15 +82,16 @@ def test_slider_prefilled_with_loan_repayment(page):
 
 def test_impact_cards_appear_on_change(page):
     """Before/after impact cards appear when repayment is changed."""
+    import re
     _create_loan(page)
     _open_whatif(page)
-    # Impact hidden initially
-    expect(page.locator("#whatif-impact")).to_be_hidden()
+    # Impact hidden initially (check class — Tailwind CDN doesn't load in headless Chromium due to CORS)
+    expect(page.locator("#whatif-impact")).to_have_class(re.compile(r"\bhidden\b"))
     # Change repayment
     page.fill("input#whatif-repayment", "700")
     page.wait_for_timeout(600)
-    # Impact cards should now be visible
-    expect(page.locator("#whatif-impact")).to_be_visible()
+    # Impact cards should now be visible (hidden class removed)
+    expect(page.locator("#whatif-impact")).not_to_have_class(re.compile(r"\bhidden\b"))
     expect(page.locator("#impact-base-interest")).not_to_have_text("-")
     expect(page.locator("#impact-wi-interest")).not_to_have_text("-")
     expect(page.locator("#impact-base-payments")).not_to_have_text("-")
@@ -331,6 +332,7 @@ def test_apply_repayment_cancel_does_not_update(page):
 
 def test_reset_clears_all_inputs(page):
     """Reset returns all inputs to default and hides impact."""
+    import re
     _create_loan(page)
     _open_whatif(page)
     # Make changes
@@ -340,8 +342,8 @@ def test_reset_clears_all_inputs(page):
     page.fill("input#whatif-extra-date", "2026-06-01")
     page.fill("input#whatif-extra-amount", "5000")
     page.wait_for_timeout(600)
-    # Verify impact visible
-    expect(page.locator("#whatif-impact")).to_be_visible()
+    # Verify impact visible (hidden class removed)
+    expect(page.locator("#whatif-impact")).not_to_have_class(re.compile(r"\bhidden\b"))
     # Reset
     page.click("text=Reset")
     page.wait_for_timeout(300)
@@ -352,9 +354,9 @@ def test_reset_clears_all_inputs(page):
     expect(page.locator("#whatif-rate-value")).to_have_value("")
     expect(page.locator("#whatif-extra-date")).to_have_value("")
     expect(page.locator("#whatif-extra-amount")).to_have_value("")
-    # Impact hidden
-    expect(page.locator("#whatif-impact")).to_be_hidden()
-    expect(page.locator("#delta-banner")).to_be_hidden()
+    # Impact hidden (check class — Tailwind CDN doesn't load in headless Chromium due to CORS)
+    expect(page.locator("#whatif-impact")).to_have_class(re.compile(r"\bhidden\b"))
+    expect(page.locator("#delta-banner")).to_have_class(re.compile(r"\bhidden\b"))
 
 
 # --- Button ordering ---
