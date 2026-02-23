@@ -13,7 +13,6 @@ services:
       resources:
         limits:
           memory: 512M
-          cpus: '1.0'
     environment:
       - DATA_DIR=/app/data
       - ENV=production
