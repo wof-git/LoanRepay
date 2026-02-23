@@ -1,0 +1,6 @@
+{
+  "statusLine": {
+    "type": "command",
+    "command": "python3 $HOME/projects/LoanRepay/.claude/statusline.py"
+  }
+}
