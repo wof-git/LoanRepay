@@ -28,6 +28,11 @@ def _run_migrations(eng):
             conn.commit()
             logger.info("Migration: added is_default column to scenarios")
 
+        conn.exec_driver_sql(
+            "CREATE UNIQUE INDEX IF NOT EXISTS uq_scenario_loan_name ON scenarios(loan_id, name)"
+        )
+        conn.commit()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -58,7 +63,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Content-Security-Policy"] = (
             "default-src 'self'; "
-            "script-src 'self' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; "
+            "script-src 'self' https://cdn.tailwindcss.com/3.4.17 https://cdn.jsdelivr.net/npm/chart.js@4.5.1; "
             "style-src 'self' https://cdn.tailwindcss.com 'unsafe-inline'; "
             "img-src 'self' data:; "
             "connect-src 'self'"

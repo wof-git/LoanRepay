@@ -512,3 +512,85 @@ def test_adjusted_repayment_reverts_on_removal():
     )
     assert sched_after_remove.total_interest == base_sched.total_interest
     assert sched_after_remove.total_repayments == base_sched.total_repayments
+
+
+# --- Boundary case tests ---
+
+def test_tiny_principal():
+    """$0.01 loan for 1 period pays off in a single payment."""
+    sched = calculate_schedule(
+        principal=0.01,
+        annual_rate=0.05,
+        frequency="monthly",
+        start_date=date(2026, 1, 1),
+        loan_term=1,
+    )
+    assert sched.total_repayments == 1
+    assert sched.rows[-1].closing_balance == 0.0
+
+
+def test_repayment_less_than_interest_negative_amortization():
+    """Fixed repayment below interest: hits MAX_ITERATIONS and warns."""
+    sched = calculate_schedule(
+        principal=100000.0,
+        annual_rate=0.10,
+        frequency="monthly",
+        start_date=date(2026, 1, 1),
+        loan_term=120,
+        fixed_repayment=100.0,  # Way below ~$833 monthly interest
+    )
+    assert sched.warning is not None
+    assert sched.total_repayments == 2000  # MAX_ITERATIONS
+
+
+def test_extra_repayment_equals_remaining_balance():
+    """Extra repayment exactly equal to remaining balance closes loan."""
+    # First compute what the balance is after 1 period
+    sched_base = calculate_schedule(
+        principal=1000.0,
+        annual_rate=0.06,
+        frequency="monthly",
+        start_date=date(2026, 1, 1),
+        loan_term=12,
+    )
+    balance_after_1 = sched_base.rows[0].closing_balance
+    # Now add extra repayment for that exact balance on period 2
+    sched = calculate_schedule(
+        principal=1000.0,
+        annual_rate=0.06,
+        frequency="monthly",
+        start_date=date(2026, 1, 1),
+        loan_term=12,
+        extra_repayments=[{"payment_date": sched_base.rows[1].date, "amount": balance_after_1}],
+    )
+    # Should pay off in 2 periods (normal payment + extra wipes it)
+    assert sched.total_repayments <= 2
+    assert sched.rows[-1].closing_balance == 0.0
+
+
+def test_rate_change_on_exact_payment_date():
+    """Rate change effective on a payment date applies from that period."""
+    # Get payment date for period 5
+    sched_base = calculate_schedule(
+        principal=30050.00,
+        annual_rate=0.0575,
+        frequency="fortnightly",
+        start_date=date(2026, 2, 20),
+        loan_term=52,
+        fixed_repayment=612.39,
+    )
+    period_5_date = sched_base.rows[4].date  # 0-indexed, period 5
+
+    sched_changed = calculate_schedule(
+        principal=30050.00,
+        annual_rate=0.0575,
+        frequency="fortnightly",
+        start_date=date(2026, 2, 20),
+        loan_term=52,
+        fixed_repayment=612.39,
+        rate_changes=[{"effective_date": period_5_date, "annual_rate": 0.07}],
+    )
+    # Periods before the change date should have the same interest
+    assert sched_base.rows[3].interest == sched_changed.rows[3].interest
+    # Total interest should be higher with the rate increase
+    assert sched_changed.total_interest > sched_base.total_interest

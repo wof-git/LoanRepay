@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from src.database import get_db
@@ -70,6 +70,8 @@ def add_rate_change(loan_id: int, rc: RateChangeCreate, db: Session = Depends(ge
         raise HTTPException(status_code=404, detail="Loan not found")
     if rc.effective_date < loan.start_date:
         raise HTTPException(status_code=422, detail="Rate change cannot be before loan start date")
+    if rc.effective_date > f"{date.today().year + 100}-12-31":
+        raise HTTPException(status_code=422, detail="Date is unreasonably far in the future")
     db_rc = RateChange(loan_id=loan_id, **rc.model_dump())
     db.add(db_rc)
     loan.updated_at = datetime.now(timezone.utc).isoformat()
@@ -98,6 +100,8 @@ def add_extra_repayment(loan_id: int, er: ExtraRepaymentCreate, db: Session = De
     loan = db.query(Loan).filter(Loan.id == loan_id).first()
     if not loan:
         raise HTTPException(status_code=404, detail="Loan not found")
+    if er.payment_date > f"{date.today().year + 100}-12-31":
+        raise HTTPException(status_code=422, detail="Date is unreasonably far in the future")
     db_er = ExtraRepayment(loan_id=loan_id, **er.model_dump())
     db.add(db_er)
     loan.updated_at = datetime.now(timezone.utc).isoformat()
@@ -128,6 +132,8 @@ def add_repayment_change(loan_id: int, rc: RepaymentChangeCreate, db: Session = 
         raise HTTPException(status_code=404, detail="Loan not found")
     if rc.effective_date < loan.start_date:
         raise HTTPException(status_code=422, detail="Repayment change cannot be before loan start date")
+    if rc.effective_date > f"{date.today().year + 100}-12-31":
+        raise HTTPException(status_code=422, detail="Date is unreasonably far in the future")
     db_rc = RepaymentChange(loan_id=loan_id, **rc.model_dump())
     db.add(db_rc)
     loan.updated_at = datetime.now(timezone.utc).isoformat()

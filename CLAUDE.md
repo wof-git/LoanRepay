@@ -37,4 +37,11 @@ docker compose -f docker/compose.yaml up --build
 ```
 
 ## Database
-SQLite in `data/loanrepay.db`. 6 tables: loans, rate_changes, repayment_changes, extra_repayments, paid_repayments, scenarios.
+SQLite in `data/loanrepay.db`. 6 tables:
+
+- `loans` — principal, annual_rate, frequency, start_date, loan_term, fixed_repayment
+- `rate_changes` — effective_date, annual_rate, adjusted_repayment (optional new repayment on rate change)
+- `repayment_changes` — effective_date, amount (override fixed repayment from a date)
+- `extra_repayments` — payment_date, amount (lump-sum payments)
+- `paid_repayments` — loan_id + repayment_number (`UniqueConstraint`)
+- `scenarios` — snapshot of schedule + config; loan_id + name (`UniqueConstraint`), is_default flag

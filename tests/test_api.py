@@ -630,3 +630,69 @@ def test_health(client):
     res = client.get("/health")
     assert res.status_code == 200
     assert res.json()["status"] == "ok"
+
+
+# --- Boundary Cases ---
+
+def test_duplicate_scenario_name_returns_409(client, created_loan):
+    """Creating two scenarios with the same name on one loan returns 409."""
+    lid = created_loan["id"]
+    res1 = client.post(f"/api/loans/{lid}/scenarios", json={"name": "Duplicate"})
+    assert res1.status_code == 201
+    res2 = client.post(f"/api/loans/{lid}/scenarios", json={"name": "Duplicate"})
+    assert res2.status_code == 409
+    assert "already exists" in res2.json()["detail"]
+
+
+def test_rate_change_on_exact_start_date(client, created_loan):
+    """Rate change on exact loan start date should be accepted (>= boundary)."""
+    lid = created_loan["id"]
+    res = client.post(f"/api/loans/{lid}/rates", json={
+        "effective_date": "2026-02-20",  # Same as loan start_date
+        "annual_rate": 0.06,
+    })
+    assert res.status_code == 201
+
+
+def test_extra_repayment_tiny_amount(client, created_loan):
+    """Extra repayment of $0.01 should be accepted."""
+    lid = created_loan["id"]
+    res = client.post(f"/api/loans/{lid}/extras", json={
+        "payment_date": "2026-06-01",
+        "amount": 0.01,
+    })
+    assert res.status_code == 201
+    assert res.json()["amount"] == 0.01
+
+
+def test_rate_change_far_future_rejected(client, created_loan):
+    """Date >100 years in the future should be rejected."""
+    lid = created_loan["id"]
+    res = client.post(f"/api/loans/{lid}/rates", json={
+        "effective_date": "2226-01-01",
+        "annual_rate": 0.06,
+    })
+    assert res.status_code == 422
+    assert "far in the future" in res.json()["detail"]
+
+
+def test_extra_repayment_far_future_rejected(client, created_loan):
+    """Extra repayment date >100 years in the future should be rejected."""
+    lid = created_loan["id"]
+    res = client.post(f"/api/loans/{lid}/extras", json={
+        "payment_date": "2226-06-01",
+        "amount": 1000.0,
+    })
+    assert res.status_code == 422
+    assert "far in the future" in res.json()["detail"]
+
+
+def test_repayment_change_far_future_rejected(client, created_loan):
+    """Repayment change date >100 years in the future should be rejected."""
+    lid = created_loan["id"]
+    res = client.post(f"/api/loans/{lid}/repayment-changes", json={
+        "effective_date": "2226-06-01",
+        "amount": 700.0,
+    })
+    assert res.status_code == 422
+    assert "far in the future" in res.json()["detail"]

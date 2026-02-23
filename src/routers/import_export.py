@@ -67,7 +67,7 @@ def export_schedule(loan_id: int, format: str = Query("csv"), db: Session = Depe
                 headers={"Content-Disposition": f'attachment; filename="{safe_name}_schedule.xlsx"'},
             )
         except ImportError:
-            raise HTTPException(status_code=500, detail="openpyxl not installed for xlsx export")
+            raise HTTPException(status_code=422, detail="xlsx export requires openpyxl package")
 
     else:
         raise HTTPException(status_code=422, detail="Format must be 'csv' or 'xlsx'")

@@ -1544,6 +1544,15 @@ document.addEventListener('change', (e) => {
     if (handler) handler(el, e);
 });
 
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const el = e.target.closest('[data-action]');
+    if (!el || el.getAttribute('role') !== 'button') return;
+    e.preventDefault();
+    const handler = clickActions[el.dataset.action];
+    if (handler) handler(el, e);
+});
+
 // --- Init ---
 
 // Bind scenario dropdown

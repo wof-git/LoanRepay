@@ -98,4 +98,8 @@ class Scenario(Base):
     is_default = Column(Integer, server_default="0", nullable=False)
     created_at = Column(Text, server_default="(datetime('now'))")
 
+    __table_args__ = (
+        UniqueConstraint("loan_id", "name"),
+    )
+
     loan = relationship("Loan", back_populates="scenarios")

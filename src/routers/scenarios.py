@@ -1,5 +1,6 @@
 import json
 from fastapi import APIRouter, Depends, HTTPException, Query
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 from src.database import get_db
 from src.models import Loan, Scenario, RateChange, ExtraRepayment, RepaymentChange
@@ -145,7 +146,11 @@ def save_scenario(loan_id: int, body: ScenarioCreate, db: Session = Depends(get_
         schedule_json=json.dumps([row.model_dump() for row in schedule.rows]),
     )
     db.add(scenario)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="A scenario with this name already exists")
     db.refresh(scenario)
     return scenario
 
@@ -206,7 +211,11 @@ def update_scenario(loan_id: int, scenario_id: int, body: ScenarioUpdate, db: Se
         scenario.config_json = json.dumps(config)
         scenario.schedule_json = json.dumps([row.model_dump() for row in schedule.rows])
 
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="A scenario with this name already exists")
     db.refresh(scenario)
     return scenario
 
